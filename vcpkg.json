@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "rvsim",
+  "version": "1.0.0",
+  "description": "RISC-V Pipeline & Memory Hierarchy Simulator",
+  "dependencies": [
+    "cpp-httplib",
+    "nlohmann-json"
+  ]
+}

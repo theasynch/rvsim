@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RVSim — RISC-V Pipeline Simulator</title>
+<meta name="description" content="Cycle-accurate RISC-V 5-stage pipeline simulator with branch prediction and cache hierarchy visualization"/>
+<style>
+/* =====================================================================
+   DESIGN SYSTEM — RVSim Dark Theme
+   ===================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg-base:    #070b14;
+  --bg-panel:   rgba(255,255,255,0.04);
+  --bg-card:    rgba(255,255,255,0.06);
+  --bg-hover:   rgba(255,255,255,0.09);
+  --border:     rgba(255,255,255,0.08);
+  --border-hi:  rgba(255,255,255,0.15);
+
+  /* Stage colors */
+  --if-color:   #3b82f6;  /* blue  */
+  --id-color:   #8b5cf6;  /* violet*/
+  --ex-color:   #f59e0b;  /* amber */
+  --mem-color:  #10b981;  /* emerald*/
+  --wb-color:   #ef4444;  /* red   */
+  --bubble-color:#374151; /* gray  */
+
+  --accent:     #6366f1;
+  --accent-glow:rgba(99,102,241,0.3);
+  --success:    #10b981;
+  --warn:       #f59e0b;
+  --danger:     #ef4444;
+
+  --text-hi:  #f1f5f9;
+  --text-md:  #94a3b8;
+  --text-lo:  #475569;
+
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-glow: 0 0 30px rgba(99,102,241,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-hi);
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* Subtle grid background */
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* =====================================================================
+   LAYOUT
+   ===================================================================== */
+.app {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+  grid-template-areas:
+    "header header"
+    "sidebar main";
+}
+
+/* =====================================================================
+   HEADER
+   ===================================================================== */
+.header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7,11,20,0.9);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), #818cf8);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #e2e8f0, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-lo);
+  font-family: var(--font-mono);
+}
+
+.header-spacer { flex: 1; }
+
+.cycle-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.cycle-badge .label { color: var(--text-md); font-size: 11px; }
+.cycle-badge .value { color: var(--text-hi); font-weight: 600; }
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.status-dot.halted { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: none; }
+.status-dot.idle   { background: var(--warn);   box-shadow: 0 0 8px var(--warn);   animation: none; }
+
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+.ipc-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* =====================================================================
+   SIDEBAR
+   ===================================================================== */
+.sidebar {
+  grid-area: sidebar;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(7,11,20,0.6);
+  backdrop-filter: blur(10px);
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+  margin-bottom: 8px;
+}
+
+/* Program list */
+.prog-list { display: flex; flex-direction: column; gap: 4px; }
+
+.prog-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.prog-item:hover { background: var(--bg-hover); border-color: var(--border); }
+.prog-item.active {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.4);
+}
+
+.prog-icon {
+  width: 28px; height: 28px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.prog-name { font-size: 13px; font-weight: 500; }
+.prog-desc { font-size: 11px; color: var(--text-md); margin-top: 1px; }
+
+/* Config panel */
+.config-panel { display: flex; flex-direction: column; gap: 10px; }
+
+.config-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.config-label { font-size: 11px; color: var(--text-md); font-weight: 500; }
+
+.select-styled, .input-styled {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-hi);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  appearance: none;
+}
+.select-styled:hover, .input-styled:hover { border-color: var(--border-hi); }
+.select-styled:focus, .input-styled:focus { border-color: var(--accent); }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.toggle {
+  position: relative; width: 36px; height: 20px;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  left: 2px; top: 2px;
+  width: 14px; height: 14px;
+  background: var(--text-md);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: rgba(99,102,241,0.3); border-color: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 8px; }
+
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-hi);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.btn:hover { background: var(--bg-hover); border-color: var(--border-hi); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #818cf8);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+.btn-primary:hover { filter: brightness(1.1); }
+
+.btn-danger { border-color: rgba(239,68,68,0.3); }
+.btn-danger:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.5); }
+
+.btn-row { display: flex; gap: 6px; }
+.btn-row .btn { flex: 1; }
+
+/* Custom assembly editor */
+.asm-editor {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-hi);
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.6;
+  transition: border-color 0.15s;
+}
+.asm-editor:focus { border-color: var(--accent); }
+.asm-editor::placeholder { color: var(--text-lo); }
+
+/* =====================================================================
+   MAIN CONTENT
+   ===================================================================== */
+.main {
+  grid-area: main;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* =====================================================================
+   PIPELINE VISUALIZATION
+   ===================================================================== */
+.pipeline-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 18px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+
+.card-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-md);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+
+/* Pipeline stages layout */
+.pipeline-stages {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+.stage-box {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Arrow connector between stages */
+.stage-arrow {
+  width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.arrow-line {
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  position: relative;
+}
+
+.arrow-line::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border-left: 7px solid var(--border);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+/* Forwarding arrow overlay — shown when forwarding is active */
+.forwarding-overlay {
+  position: absolute;
+  bottom: -12px;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.forwarding-overlay.visible { opacity: 1; }
+
+.stage-tile {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+  padding: 14px 10px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.stage-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Stage colors */
+.stage-tile.IF  { border-color: var(--if-color);  }
+.stage-tile.ID  { border-color: var(--id-color);  }
+.stage-tile.EX  { border-color: var(--ex-color);  }
+.stage-tile.MEM { border-color: var(--mem-color); }
+.stage-tile.WB  { border-color: var(--wb-color);  }
+
+.stage-tile.IF  { background: rgba(59,130,246,0.07);  }
+.stage-tile.ID  { background: rgba(139,92,246,0.07);  }
+.stage-tile.EX  { background: rgba(245,158,11,0.07);  }
+.stage-tile.MEM { background: rgba(16,185,129,0.07);  }
+.stage-tile.WB  { background: rgba(239,68,68,0.07);   }
+
+.stage-tile.bubble {
+  border-color: var(--bubble-color) !important;
+  background: transparent !important;
+  opacity: 0.5;
+}
+
+.stage-tile.stalled {
+  animation: stall-pulse 0.6s ease-in-out infinite;
+}
+
+.stage-tile.active-update {
+  animation: flash-update 0.4s ease-out;
+}
+
+@keyframes stall-pulse {
+  0%,100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 12px rgba(245,158,11,0.5); }
+}
+
+@keyframes flash-update {
+  0%  { background-color: rgba(99,102,241,0.3); }
+  100%{ background-color: inherit; }
+}
+
+.stage-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.stage-tile.IF  .stage-name { color: var(--if-color);  }
+.stage-tile.ID  .stage-name { color: var(--id-color);  }
+.stage-tile.EX  .stage-name { color: var(--ex-color);  }
+.stage-tile.MEM .stage-name { color: var(--mem-color); }
+.stage-tile.WB  .stage-name { color: var(--wb-color);  }
+
+.stage-instr {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-hi);
+  word-break: break-all;
+  min-height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1.3;
+}
+
+.stage-pc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-lo);
+  margin-top: 6px;
+}
+
+.stage-badge {
+  position: absolute;
+  top: 6px; right: 6px;
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-stall   { background: rgba(245,158,11,0.2); color: var(--warn); }
+.badge-bubble  { background: rgba(71,85,105,0.3);  color: var(--text-lo); }
+.badge-fwd     { background: rgba(16,185,129,0.2); color: var(--success); }
+.badge-miss    { background: rgba(239,68,68,0.2);  color: var(--danger); }
+.badge-hit     { background: rgba(16,185,129,0.2); color: var(--success); }
+.badge-wb      { background: rgba(99,102,241,0.2); color: #818cf8; }
+
+/* Pipeline event log */
+.event-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.event-tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  border: 1px solid transparent;
+  animation: tag-appear 0.3s ease-out;
+}
+@keyframes tag-appear {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* =====================================================================
+   STATS ROW
+   ===================================================================== */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border-hi); }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.stat-card.ipc::before    { background: linear-gradient(90deg, var(--accent), #818cf8); }
+.stat-card.miss::before   { background: linear-gradient(90deg, var(--success), #34d399); }
+.stat-card.mispred::before{ background: linear-gradient(90deg, var(--warn), #fbbf24); }
+.stat-card.stalls::before { background: linear-gradient(90deg, var(--danger), #f87171); }
+.stat-card.cycles::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.stat-card.instrs::before { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+
+.stat-label { font-size: 11px; color: var(--text-md); margin-bottom: 6px; }
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-hi);
+  transition: all 0.3s ease;
+}
+.stat-sub { font-size: 10px; color: var(--text-lo); margin-top: 2px; font-family: var(--font-mono); }
+
+/* =====================================================================
+   BOTTOM PANELS (Registers + Cache + Predictor + Charts)
+   ===================================================================== */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.panel-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.02);
+}
+
+.panel-title {
+  font-size: 12px; font-weight: 600;
+  flex: 1;
+}
+
+.panel-body { padding: 12px; }
+
+/* Register grid */
+.reg-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.reg-grid::-webkit-scrollbar { width: 3px; }
+.reg-grid::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+.reg-cell {
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: default;
+  transition: all 0.2s;
+}
+.reg-cell:hover { background: var(--bg-hover); border-color: var(--border); }
+.reg-cell.changed {
+  background: rgba(99,102,241,0.15) !important;
+  border-color: rgba(99,102,241,0.4) !important;
+  animation: reg-flash 0.5s ease-out;
+}
+@keyframes reg-flash {
+  0%  { background: rgba(99,102,241,0.4); }
+  100%{ background: rgba(99,102,241,0.15); }
+}
+
+.reg-name { font-size: 9px; color: var(--text-lo); font-family: var(--font-mono); }
+.reg-val  { font-size: 10px; color: var(--text-hi); font-family: var(--font-mono); font-weight: 500; }
+
+/* Cache visualization */
+.cache-section { margin-bottom: 12px; }
+
+.cache-title {
+  font-size: 11px; font-weight: 600; color: var(--text-md);
+  margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.cache-hit-bar {
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.cache-hit-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--success), #34d399);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.cache-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.cache-stat {
+  text-align: center;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+}
+.cache-stat .val { font-size: 14px; font-weight: 700; font-family: var(--font-mono); }
+.cache-stat .lbl { font-size: 9px; color: var(--text-lo); }
+
+.cache-sets-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.set-cell {
+  height: 14px;
+  border-radius: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+  position: relative;
+}
+.set-cell.valid   { background: rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.5); }
+.set-cell.invalid { background: var(--bg-card); }
+
+/* Branch predictor */
+.pht-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.pht-cell {
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+  cursor: default;
+}
+.pht-cell.snt { background: rgba(239,68,68,0.3);   color: var(--danger);  border-color: rgba(239,68,68,0.4); }
+.pht-cell.wnt { background: rgba(239,68,68,0.15);  color: #f87171;        }
+.pht-cell.wt  { background: rgba(16,185,129,0.15); color: #34d399;        }
+.pht-cell.st  { background: rgba(16,185,129,0.3);  color: var(--success); border-color: rgba(16,185,129,0.4); }
+
+.ghr-display {
+  display: flex; gap: 3px; margin-top: 8px; flex-wrap: wrap;
+}
+.ghr-bit {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.ghr-bit.taken    { background: rgba(16,185,129,0.3); color: var(--success); border-color: rgba(16,185,129,0.4); }
+.ghr-bit.not-taken{ background: rgba(239,68,68,0.3);  color: var(--danger);  border-color: rgba(239,68,68,0.4); }
+
+/* =====================================================================
+   INSTRUCTION LOG
+   ===================================================================== */
+.instr-log {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.instr-log::-webkit-scrollbar { width: 3px; }
+.instr-log::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+.log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  animation: log-appear 0.2s ease-out;
+  align-items: center;
+}
+@keyframes log-appear {
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.log-entry:hover { background: var(--bg-hover); }
+.log-cycle { color: var(--text-lo); min-width: 40px; }
+.log-stage { min-width: 36px; font-weight: 600; }
+.log-instr { color: var(--text-hi); flex: 1; }
+.log-note  { color: var(--text-lo); font-size: 10px; }
+
+/* =====================================================================
+   TOAST NOTIFICATION
+   ===================================================================== */
+.toast-container {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 1000;
+}
+.toast {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  animation: toast-in 0.3s ease-out;
+  max-width: 300px;
+}
+@keyframes toast-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.toast.success { background: rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.4); color: #34d399; }
+.toast.error   { background: rgba(239,68,68,0.2);  border-color: rgba(239,68,68,0.4);  color: #f87171; }
+.toast.info    { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: #818cf8; }
+
+/* =====================================================================
+   TABS
+   ===================================================================== */
+.tab-row {
+  display: flex; gap: 2px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-md);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.tab-btn:hover { color: var(--text-hi); }
+.tab-btn.active {
+  background: var(--bg-hover);
+  color: var(--text-hi);
+}
+
+.tab-panel { display: none; padding: 12px; }
+.tab-panel.active { display: block; }
+
+/* =====================================================================
+   DIVIDER
+   ===================================================================== */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* =====================================================================
+   RESPONSIVE / LOADING
+   ===================================================================== */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-base);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px;
+  z-index: 9999;
+  transition: opacity 0.4s ease;
+}
+
+.loading-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text { font-size: 14px; color: var(--text-md); }
+
+/* =====================================================================
+   CUSTOM SCROLLBAR (global)
+   ===================================================================== */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-lo); }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="logo-icon" style="width:48px;height:48px;font-size:24px;margin-bottom:8px;">⚙️</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connecting to simulator...</div>
+</div>
+
+<!-- Toast notifications -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Main App Layout -->
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">⚙️</div>
+      <div>
+        <div class="logo-text">RVSim</div>
+        <div class="logo-sub">RISC-V Pipeline Simulator</div>
+      </div>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="cycle-badge">
+      <div class="status-dot idle" id="statusDot"></div>
+      <span class="label">CYCLE</span>
+      <span class="value" id="headerCycle">0</span>
+    </div>
+    <div class="ipc-badge">
+      <span style="color:var(--text-md);font-size:11px">IPC</span>
+      <span style="font-weight:600" id="headerIPC">0.000</span>
+    </div>
+    <div class="ipc-badge">
+      <span style="color:var(--text-md);font-size:11px">PC</span>
+      <span style="font-weight:600;color:#818cf8" id="headerPC">0x00000000</span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Programs -->
+    <div>
+      <div class="section-label">Programs</div>
+      <div class="prog-list" id="programList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Custom Assembly -->
+    <div>
+      <div class="section-label">Custom Assembly</div>
+      <textarea class="asm-editor" id="asmEditor" rows="6"
+        placeholder="# RISC-V Assembly&#10;ADDI x1, x0, 10&#10;ADDI x2, x0, 20&#10;ADD x3, x1, x2&#10;ECALL"></textarea>
+      <button class="btn btn-primary" style="margin-top:6px;width:100%" onclick="loadCustomAsm()">
+        <span>▶</span> Assemble & Load
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Configuration -->
+    <div>
+      <div class="section-label">Configuration</div>
+      <div class="config-panel">
+        <div class="config-row">
+          <div class="config-label">Branch Predictor</div>
+          <select class="select-styled" id="predictorSelect" onchange="applyConfig()">
+            <option value="static_not_taken">Static Not-Taken</option>
+            <option value="static_taken">Static Taken</option>
+            <option value="two_bit">2-Bit Saturating</option>
+            <option value="gshare">GShare (8-bit)</option>
+            <option value="tournament">Tournament</option>
+          </select>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Cache Size (I&D)</div>
+          <select class="select-styled" id="cacheSizeSelect" onchange="applyConfig()">
+            <option value="1024">1 KB</option>
+            <option value="2048">2 KB</option>
+            <option value="4096">4 KB</option>
+            <option value="8192" selected>8 KB</option>
+            <option value="16384">16 KB</option>
+            <option value="32768">32 KB</option>
+          </select>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Cache Associativity</div>
+          <select class="select-styled" id="cacheAssocSelect" onchange="applyConfig()">
+            <option value="1">Direct-Mapped (1-way)</option>
+            <option value="2">2-Way Set Assoc.</option>
+            <option value="4" selected>4-Way Set Assoc.</option>
+            <option value="8">8-Way Set Assoc.</option>
+            <option value="0">Fully Associative</option>
+          </select>
+        </div>
+        <div class="config-row">
+          <div class="toggle-row">
+            <div class="config-label">Data Forwarding</div>
+            <label class="toggle">
+              <input type="checkbox" id="forwardingToggle" checked onchange="applyConfig()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Controls -->
+    <div>
+      <div class="section-label">Controls</div>
+      <div class="controls">
+        <button class="btn btn-primary" id="btnStep" onclick="doStep(1)">
+          <span>⏭</span> Step 1 Cycle
+        </button>
+        <div class="btn-row">
+          <button class="btn" onclick="doStep(5)">+5</button>
+          <button class="btn" onclick="doStep(10)">+10</button>
+          <button class="btn" onclick="doStep(50)">+50</button>
+        </div>
+        <button class="btn" id="btnRun" onclick="doRun()">
+          <span id="runBtnIcon">▶</span> Run to Halt
+        </button>
+        <button class="btn btn-danger" onclick="doReset()">
+          <span>↺</span> Reset
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- Pipeline Visualization -->
+    <div class="pipeline-card">
+      <div class="card-header">
+        <span style="font-size:16px">🔄</span>
+        <span class="card-title">5-Stage Pipeline</span>
+        <div class="card-badge" id="pipelineStatus">Ready</div>
+        <div style="flex:1"></div>
+        <div class="card-badge" id="hazardBadge" style="display:none;color:var(--warn);border-color:rgba(245,158,11,0.3)">⚠ STALL</div>
+        <div class="card-badge" id="flushBadge"  style="display:none;color:var(--danger);border-color:rgba(239,68,68,0.3)">⚡ FLUSH</div>
+      </div>
+
+      <div class="pipeline-stages">
+        <!-- IF Stage -->
+        <div class="stage-box">
+          <div class="stage-tile IF" id="stageIF">
+            <div class="stage-name">IF</div>
+            <div class="stage-instr" id="ifInstr">Instruction Fetch</div>
+            <div class="stage-pc"   id="ifPC">—</div>
+          </div>
+          <div class="forwarding-overlay" id="fwdIF"></div>
+        </div>
+
+        <div class="stage-arrow"><div class="arrow-line"></div></div>
+
+        <!-- ID Stage -->
+        <div class="stage-box">
+          <div class="stage-tile ID" id="stageID">
+            <div class="stage-name">ID</div>
+            <div class="stage-instr" id="idInstr">Decode + Reg Read</div>
+            <div class="stage-pc"   id="idPC">—</div>
+          </div>
+        </div>
+
+        <div class="stage-arrow"><div class="arrow-line"></div></div>
+
+        <!-- EX Stage -->
+        <div class="stage-box">
+          <div class="stage-tile EX" id="stageEX">
+            <div class="stage-name">EX</div>
+            <div class="stage-instr" id="exInstr">ALU Execute</div>
+            <div class="stage-pc"   id="exPC">—</div>
+          </div>
+          <div class="forwarding-overlay" id="fwdEX"></div>
+        </div>
+
+        <div class="stage-arrow"><div class="arrow-line"></div></div>
+
+        <!-- MEM Stage -->
+        <div class="stage-box">
+          <div class="stage-tile MEM" id="stageMEM">
+            <div class="stage-name">MEM</div>
+            <div class="stage-instr" id="memInstr">Memory Access</div>
+            <div class="stage-pc"   id="memPC">—</div>
+          </div>
+        </div>
+
+        <div class="stage-arrow"><div class="arrow-line"></div></div>
+
+        <!-- WB Stage -->
+        <div class="stage-box">
+          <div class="stage-tile WB" id="stageWB">
+            <div class="stage-name">WB</div>
+            <div class="stage-instr" id="wbInstr">Write Back</div>
+            <div class="stage-pc"   id="wbPC">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event tags -->
+      <div class="event-bar" id="eventBar"></div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card ipc">
+        <div class="stat-label">Instructions Per Cycle</div>
+        <div class="stat-value" id="statIPC">0.000</div>
+        <div class="stat-sub">ideal = 1.000</div>
+      </div>
+      <div class="stat-card cycles">
+        <div class="stat-label">Total Cycles</div>
+        <div class="stat-value" id="statCycles">0</div>
+        <div class="stat-sub">clock ticks</div>
+      </div>
+      <div class="stat-card instrs">
+        <div class="stat-label">Instructions Retired</div>
+        <div class="stat-value" id="statInstrs">0</div>
+        <div class="stat-sub">completed WB</div>
+      </div>
+      <div class="stat-card stalls">
+        <div class="stat-label">Stall Cycles</div>
+        <div class="stat-value" id="statStalls">0</div>
+        <div class="stat-sub">load-use hazard</div>
+      </div>
+      <div class="stat-card mispred">
+        <div class="stat-label">Misprediction Rate</div>
+        <div class="stat-value" id="statMispred">0%</div>
+        <div class="stat-sub" id="statMispredSub">0 / 0 branches</div>
+      </div>
+      <div class="stat-card miss">
+        <div class="stat-label">Cache Miss Rate</div>
+        <div class="stat-value" id="statMiss">0%</div>
+        <div class="stat-sub" id="statMissSub">I+D combined</div>
+      </div>
+    </div>
+
+    <!-- Bottom panels -->
+    <div class="bottom-grid">
+
+      <!-- Registers + Log tabs -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span>🗂</span>
+          <span class="panel-title">Register File</span>
+          <span class="card-badge" id="wbBadge" style="display:none;font-size:10px"></span>
+        </div>
+        <div style="padding:8px 8px 0">
+          <div class="tab-row">
+            <button class="tab-btn active" onclick="showTab('regs','tab-regs',this)">Registers</button>
+            <button class="tab-btn" onclick="showTab('regs','tab-log',this)">Event Log</button>
+          </div>
+        </div>
+        <div class="tab-panel active" id="tab-regs">
+          <div class="reg-grid" id="regGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="tab-panel" id="tab-log">
+          <div class="instr-log" id="instrLog"></div>
+        </div>
+      </div>
+
+      <!-- Cache + Predictor tabs -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span>🧠</span>
+          <span class="panel-title">Memory Hierarchy</span>
+        </div>
+        <div style="padding:8px 8px 0">
+          <div class="tab-row">
+            <button class="tab-btn active" onclick="showTab('cache','tab-icache',this)">I-Cache</button>
+            <button class="tab-btn" onclick="showTab('cache','tab-dcache',this)">D-Cache</button>
+            <button class="tab-btn" onclick="showTab('cache','tab-predictor',this)">Predictor</button>
+          </div>
+        </div>
+        <div class="tab-panel active" id="tab-icache">
+          <div id="icacheViz"></div>
+        </div>
+        <div class="tab-panel" id="tab-dcache">
+          <div id="dcacheViz"></div>
+        </div>
+        <div class="tab-panel" id="tab-predictor">
+          <div id="predictorViz"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+// =====================================================================
+// RVSim Frontend — JavaScript
+// =====================================================================
+
+const API = window.location.origin;
+let state = null;
+let running = false;
+let selectedProgram = null;
+let regPrevValues = new Array(32).fill(0);
+let logEntries = [];
+
+// =====================================================================
+// TAB SYSTEM
+// =====================================================================
+function showTab(group, tabId, btn) {
+  // Hide all panels in this group
+  document.querySelectorAll(`#tab-${group === 'regs' ? 'regs' : 'icache'}, #tab-${group === 'regs' ? 'log' : 'dcache'}, #tab-${group === 'regs' ? 'xxx' : 'predictor'}`).forEach(el => {});
+
+  // Find parent tab-row and deactivate all
+  const siblings = btn.parentElement.querySelectorAll('.tab-btn');
+  siblings.forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Show the selected panel
+  const panels = btn.closest('.panel-card').querySelectorAll('.tab-panel');
+  panels.forEach(p => p.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+// =====================================================================
+// TOAST NOTIFICATIONS
+// =====================================================================
+function toast(msg, type='info', duration=3000) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(40px)';
+    el.style.transition = 'all 0.3s';
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+// =====================================================================
+// API CALLS
+// =====================================================================
+async function api(method, path, body) {
+  const opts = { method };
+  if (body) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+
+// =====================================================================
+// LOAD PROGRAMS LIST
+// =====================================================================
+async function loadProgramList() {
+  try {
+    const data = await api('GET', '/api/programs');
+    const list = document.getElementById('programList');
+    const icons = { fibonacci:'🔢', bubble_sort:'📊', matrix_mul:'🔲', sum:'➕', loop:'🔁' };
+    list.innerHTML = '';
+    data.programs.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'prog-item';
+      el.id = 'prog-' + p.id;
+      el.innerHTML = `
+        <div class="prog-icon">${icons[p.id] || '📄'}</div>
+        <div>
+          <div class="prog-name">${p.name}</div>
+          <div class="prog-desc">${p.description}</div>
+        </div>`;
+      el.onclick = () => loadBuiltin(p.id, el);
+      list.appendChild(el);
+    });
+  } catch(e) {
+    toast('Cannot reach simulator server', 'error');
+  }
+}
+
+async function loadBuiltin(id, el) {
+  document.querySelectorAll('.prog-item').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  selectedProgram = id;
+  const data = await api('POST', '/api/load', { builtin: id });
+  if (data.ok) {
+    updateUI(data.state);
+    toast(`Loaded: ${id}`, 'success');
+    logEntries = [];
+    document.getElementById('instrLog').innerHTML = '';
+  } else {
+    toast(data.error, 'error');
+  }
+}
+
+// =====================================================================
+// SIMPLE RISC-V ASSEMBLER (JavaScript)
+// Supports all RV32I base instructions + common pseudo-instructions
+// =====================================================================
+function assemble(asmText) {
+  const lines = asmText.split('\n');
+  const words = [];
+  const labels = {};
+  const pending = []; // forward label references
+
+  // ABI register map
+  const REGS = {
+    zero:0,ra:1,sp:2,gp:3,tp:4,
+    t0:5,t1:6,t2:7,
+    s0:8,fp:8,s1:9,
+    a0:10,a1:11,a2:12,a3:13,a4:14,a5:15,a6:16,a7:17,
+    s2:18,s3:19,s4:20,s5:21,s6:22,s7:23,s8:24,s9:25,s10:26,s11:27,
+    t3:28,t4:29,t5:30,t6:31
+  };
+  for(let i=0;i<32;i++) REGS['x'+i]=i;
+
+  function reg(s) {
+    s = s.trim().replace(',','');
+    if(REGS[s] !== undefined) return REGS[s];
+    throw new Error('Unknown register: ' + s);
+  }
+
+  function imm(s) {
+    s = s.trim().replace(',','');
+    const n = parseInt(s, s.startsWith('0x')||s.startsWith('0X') ? 16 : 10);
+    if(isNaN(n)) throw new Error('Bad immediate: ' + s);
+    return n;
+  }
+
+  function rtype(rd,rs1,rs2,f3,f7) {
+    return ((f7&127)<<25)|((rs2&31)<<20)|((rs1&31)<<15)|((f3&7)<<12)|((rd&31)<<7)|0x33;
+  }
+  function itype(rd,rs1,immVal,f3,opcode) {
+    return ((immVal&0xFFF)<<20)|((rs1&31)<<15)|((f3&7)<<12)|((rd&31)<<7)|(opcode&0x7F);
+  }
+  function stype(rs1,rs2,immVal,f3) {
+    const i11_5=(immVal>>5)&127, i4_0=immVal&31;
+    return (i11_5<<25)|((rs2&31)<<20)|((rs1&31)<<15)|((f3&7)<<12)|(i4_0<<7)|0x23;
+  }
+  function btype(rs1,rs2,immVal,f3) {
+    const i12=(immVal>>12)&1, i11=(immVal>>11)&1;
+    const i10_5=(immVal>>5)&63, i4_1=(immVal>>1)&15;
+    return (i12<<31)|(i10_5<<25)|((rs2&31)<<20)|((rs1&31)<<15)|((f3&7)<<12)|(i4_1<<8)|(i11<<7)|0x63;
+  }
+  function utype(rd,immVal,opcode) {
+    return (immVal&0xFFFFF000)|((rd&31)<<7)|(opcode&0x7F);
+  }
+  function jtype(rd,immVal) {
+    const i20=(immVal>>20)&1, i19_12=(immVal>>12)&255;
+    const i11=(immVal>>11)&1, i10_1=(immVal>>1)&1023;
+    return (i20<<31)|(i10_1<<21)|(i11<<20)|(i19_12<<12)|((rd&31)<<7)|0x6F;
+  }
+
+  // First pass: collect labels
+  let addr = 0;
+  const cleanLines = [];
+  for(const rawLine of lines) {
+    let line = rawLine.split('#')[0].trim();
+    if(!line) continue;
+    if(line.endsWith(':')) { labels[line.slice(0,-1).trim()] = addr; continue; }
+    if(line.includes(':')) {
+      const [lbl,...rest] = line.split(':');
+      labels[lbl.trim()] = addr;
+      line = rest.join(':').trim();
+      if(!line) continue;
+    }
+    cleanLines.push({ line, addr });
+    addr += 4;
+  }
+
+  // Second pass: encode
+  for(const { line, addr: pc } of cleanLines) {
+    const tok = line.split(/[\s,()]+/).filter(Boolean);
+    const mn = tok[0].toUpperCase();
+    let word = 0;
+
+    try {
+      switch(mn) {
+        // R-type
+        case 'ADD':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),0,0);   break;
+        case 'SUB':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),0,0x20);break;
+        case 'SLL':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),1,0);   break;
+        case 'SLT':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),2,0);   break;
+        case 'SLTU': word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),3,0);   break;
+        case 'XOR':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),4,0);   break;
+        case 'SRL':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),5,0);   break;
+        case 'SRA':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),5,0x20);break;
+        case 'OR':   word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),6,0);   break;
+        case 'AND':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),7,0);   break;
+        // I-type ALU
+        case 'ADDI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),0,0x13);break;
+        case 'SLTI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),2,0x13);break;
+        case 'SLTIU':word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),3,0x13);break;
+        case 'XORI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),4,0x13);break;
+        case 'ORI':  word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),6,0x13);break;
+        case 'ANDI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),7,0x13);break;
+        case 'SLLI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3])&31,1,0x13);break;
+        case 'SRLI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3])&31,5,0x13);break;
+        case 'SRAI': word=itype(reg(tok[1]),reg(tok[2])|(0x20<<5),imm(tok[3])&31,5,0x13);break;
+        // Loads
+        case 'LW': { const[,rd,o,b]=[tok[1],tok[2],...tok.slice(2)];
+          word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),2,3); break; }
+        case 'LH': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),1,3); break;
+        case 'LB': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),0,3); break;
+        case 'LHU':word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),5,3); break;
+        case 'LBU':word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),4,3); break;
+        // Stores  SW rs2, imm(rs1) → tok: SW,rs2,imm,rs1
+        case 'SW': word=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),2); break;
+        case 'SH': word=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),1); break;
+        case 'SB': word=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),0); break;
+        // Branches  BEQ rs1,rs2,label
+        case 'BEQ': case 'BNE': case 'BLT': case 'BGE': case 'BLTU': case 'BGEU': {
+          const f3map={BEQ:0,BNE:1,BLT:4,BGE:5,BLTU:6,BGEU:7};
+          let target = tok[3];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=btype(reg(tok[1]),reg(tok[2]),off,f3map[mn]); break; }
+        // JAL
+        case 'JAL': {
+          let target = tok[2];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=jtype(reg(tok[1]),off); break; }
+        // JALR
+        case 'JALR': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),0,0x67); break;
+        // LUI, AUIPC
+        case 'LUI':   word=utype(reg(tok[1]),imm(tok[2])<<12, 0x37); break;
+        case 'AUIPC': word=utype(reg(tok[1]),imm(tok[2])<<12, 0x17); break;
+        // System
+        case 'ECALL':  word=0x00000073; break;
+        case 'EBREAK': word=0x00100073; break;
+        // Pseudo-instructions
+        case 'NOP':  word=0x00000013; break;
+        case 'MV':   word=itype(reg(tok[1]),reg(tok[2]),0,0,0x13); break;
+        case 'LI':   word=itype(reg(tok[1]),0,imm(tok[2]),0,0x13); break;
+        case 'RET':  word=itype(1,1,0,0,0x67); break; // JALR x1,x1,0? no: JALR x0,x1,0
+        case 'J': {
+          let target = tok[1];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=jtype(0,off); break; }
+        case 'NOT':  word=itype(reg(tok[1]),reg(tok[2]),-1,4,0x13); break;
+        case 'NEG':  word=rtype(reg(tok[1]),0,reg(tok[2]),0,0x20); break;
+        case 'BEQZ': {
+          let target=tok[2];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=btype(reg(tok[1]),0,off,0); break; }
+        case 'BNEZ': {
+          let target=tok[2];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=btype(reg(tok[1]),0,off,1); break; }
+        default:
+          throw new Error('Unknown instruction: ' + mn);
+      }
+    } catch(e) {
+      throw new Error(`Line "${line}": ${e.message}`);
+    }
+
+    words.push((word >>> 0).toString(16).padStart(8,'0').toUpperCase());
+  }
+  return words.join('\n');
+}
+
+async function loadCustomAsm() {
+  const text = document.getElementById('asmEditor').value;
+  if(!text.trim()) { toast('Assembly editor is empty','error'); return; }
+  try {
+    const hex = assemble(text);
+    const data = await api('POST', '/api/load', { hex });
+    if(data.ok) {
+      updateUI(data.state);
+      toast('Assembled & loaded successfully', 'success');
+      document.querySelectorAll('.prog-item').forEach(x => x.classList.remove('active'));
+      logEntries = [];
+      document.getElementById('instrLog').innerHTML = '';
+    } else {
+      toast(data.error, 'error');
+    }
+  } catch(e) {
+    toast('Assembly error: ' + e.message, 'error');
+  }
+}
+
+// =====================================================================
+// CONTROLS
+// =====================================================================
+async function doStep(n=1) {
+  const data = await api('POST', '/api/step', { cycles: n });
+  if(data.ok) {
+    updateUI(data.state);
+    addLog(data.state);
+  }
+}
+
+async function doRun() {
+  if(running) return;
+  running = true;
+  document.getElementById('runBtnIcon').textContent = '⏸';
+  document.getElementById('btnRun').textContent = 'Running...';
+  const data = await api('POST', '/api/run', { max_cycles: 1000000 });
+  if(data.ok) updateUI(data.state);
+  running = false;
+  document.getElementById('runBtnIcon').textContent = '▶';
+  document.getElementById('btnRun').innerHTML = '<span id="runBtnIcon">▶</span> Run to Halt';
+}
+
+async function doReset() {
+  const data = await api('POST', '/api/reset');
+  if(data.ok) {
+    updateUI(data.state);
+    logEntries = [];
+    document.getElementById('instrLog').innerHTML = '';
+    toast('Simulator reset', 'info');
+  }
+}
+
+async function applyConfig() {
+  const predictor = document.getElementById('predictorSelect').value;
+  const forwarding = document.getElementById('forwardingToggle').checked;
+  await api('POST', '/api/config', { predictor, forwarding });
+  toast(`Config: ${predictor}, forwarding=${forwarding}`, 'info', 2000);
+}
+
+// =====================================================================
+// UI UPDATE
+// =====================================================================
+function updateUI(s) {
+  state = s;
+  updateHeader(s);
+  updatePipeline(s);
+  updateStats(s);
+  updateRegisters(s);
+  updateCache(s);
+  updatePredictor(s);
+}
+
+function updateHeader(s) {
+  document.getElementById('headerCycle').textContent = s.cycle;
+  document.getElementById('headerIPC').textContent   = s.stats.ipc.toFixed(3);
+  document.getElementById('headerPC').textContent    = '—'; // TODO: add PC to state
+
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + (s.halted ? 'halted' : s.cycle === 0 ? 'idle' : '');
+}
+
+// Stage color classes
+const STAGE_COLORS = { IF:'#3b82f6', ID:'#8b5cf6', EX:'#f59e0b', MEM:'#10b981', WB:'#ef4444' };
+
+function updatePipeline(s) {
+  const stageIds = ['IF','ID','EX','MEM','WB'];
+  const instrIds = ['ifInstr','idInstr','exInstr','memInstr','wbInstr'];
+  const pcIds    = ['ifPC','idPC','exPC','memPC','wbPC'];
+  const tileIds  = ['stageIF','stageID','stageEX','stageMEM','stageWB'];
+
+  // Remove old badges
+  document.querySelectorAll('.stage-badge').forEach(b => b.remove());
+
+  for(let i=0; i<5; i++) {
+    const stage = s.stages[i];
+    const tile  = document.getElementById(tileIds[i]);
+    const instrEl = document.getElementById(instrIds[i]);
+    const pcEl    = document.getElementById(pcIds[i]);
+
+    // Reset classes
+    tile.className = `stage-tile ${stageIds[i]}`;
+    if(stage.bubble)  tile.classList.add('bubble');
+    if(stage.stalled) tile.classList.add('stalled');
+
+    instrEl.textContent = stage.bubble  ? '⬡ bubble' :
+                          stage.stalled ? '⏸ stalled' :
+                          (stage.asm || '---');
+    pcEl.textContent = stage.bubble ? '' : (stage.pc_hex || '');
+
+    // Add badges
+    if(stage.stalled) {
+      const b = document.createElement('div');
+      b.className = 'stage-badge badge-stall'; b.textContent = 'STALL'; tile.appendChild(b);
+    }
+    if(stage.bubble && !stage.stalled) {
+      // don't add bubble badge — visual is enough
+    }
+    if(stage.is_mem_op) {
+      const b = document.createElement('div');
+      b.className = 'stage-badge ' + (stage.cache_hit ? 'badge-hit' : 'badge-miss');
+      b.textContent = stage.cache_hit ? 'HIT' : 'MISS'; tile.appendChild(b);
+    }
+    if(stage.wb_active) {
+      const b = document.createElement('div');
+      b.className = 'stage-badge badge-wb';
+      b.textContent = `x${stage.wb_rd}←${stage.wb_value}`; tile.appendChild(b);
+      // WB badge in header
+      const wb = document.getElementById('wbBadge');
+      wb.style.display = '';
+      wb.textContent = `x${stage.wb_rd} = ${stage.wb_value} (0x${(stage.wb_value>>>0).toString(16).toUpperCase().padStart(8,'0')})`;
+    } else if(i===4) {
+      document.getElementById('wbBadge').style.display = 'none';
+    }
+
+    // Forwarding indicators for EX stage
+    if(i===2) {
+      const fwdEl = document.getElementById('fwdEX');
+      const fwdTexts = [];
+      if(stage.forward_a && stage.forward_a !== 'NONE' && stage.forward_a !== '')
+        fwdTexts.push(`A←${stage.forward_a}`);
+      if(stage.forward_b && stage.forward_b !== 'NONE' && stage.forward_b !== '')
+        fwdTexts.push(`B←${stage.forward_b}`);
+      if(fwdTexts.length) {
+        fwdEl.textContent = '⇑ FWD: ' + fwdTexts.join(', ');
+        fwdEl.classList.add('visible');
+        const b = document.createElement('div');
+        b.className = 'stage-badge badge-fwd'; b.textContent = 'FWD'; tile.appendChild(b);
+      } else {
+        fwdEl.classList.remove('visible');
+      }
+    }
+
+    // Flash animation on new instruction
+    tile.classList.add('active-update');
+    setTimeout(() => tile.classList.remove('active-update'), 400);
+  }
+
+  // Event tags
+  const bar = document.getElementById('eventBar');
+  bar.innerHTML = '';
+  if(s.stall) addEventTag(bar, '⚠ Load-Use Stall', '#f59e0b', 'rgba(245,158,11,0.15)');
+  if(s.flush) addEventTag(bar, '⚡ Control Flush (2 cycles)', '#ef4444', 'rgba(239,68,68,0.15)');
+
+  // Hazard/Flush badges in pipeline header
+  document.getElementById('hazardBadge').style.display = s.stall ? '' : 'none';
+  document.getElementById('flushBadge').style.display  = s.flush ? '' : 'none';
+  document.getElementById('pipelineStatus').textContent = s.halted ? 'HALTED' :
+    s.stall ? 'STALLED' : s.flush ? 'FLUSH' : `Cycle ${s.cycle}`;
+}
+
+function addEventTag(bar, text, color, bg) {
+  const el = document.createElement('div');
+  el.className = 'event-tag';
+  el.style.color = color; el.style.background = bg;
+  el.style.borderColor = color + '44';
+  el.textContent = text;
+  bar.appendChild(el);
+}
+
+// =====================================================================
+// STATS
+// =====================================================================
+function updateStats(s) {
+  const st = s.stats;
+  animateNum('statIPC',    st.ipc.toFixed(3));
+  animateNum('statCycles', st.cycles);
+  animateNum('statInstrs', st.instructions);
+  animateNum('statStalls', st.stall_cycles);
+  animateNum('statMispred', (st.mispred_rate*100).toFixed(1) + '%');
+  document.getElementById('statMispredSub').textContent =
+    `${st.mispredictions} / ${st.branch_count} branches`;
+  animateNum('statMiss', (st.miss_rate*100).toFixed(1) + '%');
+  document.getElementById('statMissSub').textContent =
+    `${st.cache_misses} misses / ${st.cache_accesses} accesses`;
+
+  document.getElementById('headerCycle').textContent = st.cycles;
+  document.getElementById('headerIPC').textContent   = st.ipc.toFixed(3);
+}
+
+function animateNum(id, val) {
+  const el = document.getElementById(id);
+  if(el.textContent !== String(val)) {
+    el.textContent = val;
+    el.style.color = 'var(--accent)';
+    setTimeout(() => el.style.color = '', 300);
+  }
+}
+
+// =====================================================================
+// REGISTERS
+// =====================================================================
+const ABI = ['zero','ra','sp','gp','tp','t0','t1','t2',
+              's0','s1','a0','a1','a2','a3','a4','a5',
+              'a6','a7','s2','s3','s4','s5','s6','s7',
+              's8','s9','s10','s11','t3','t4','t5','t6'];
+
+function initRegGrid() {
+  const grid = document.getElementById('regGrid');
+  grid.innerHTML = '';
+  for(let i=0;i<32;i++) {
+    const cell = document.createElement('div');
+    cell.className = 'reg-cell';
+    cell.id = `reg-${i}`;
+    cell.title = `x${i} (${ABI[i]})`;
+    cell.innerHTML = `<div class="reg-name">${ABI[i]}</div><div class="reg-val" id="rv-${i}">0x00000000</div>`;
+    grid.appendChild(cell);
+  }
+}
+
+function updateRegisters(s) {
+  if(!s.registers) return;
+  s.registers.forEach((r,i) => {
+    const el = document.getElementById(`rv-${i}`);
+    const cell = document.getElementById(`reg-${i}`);
+    if(!el) return;
+    const hexVal = '0x' + ((r.value>>>0).toString(16).toUpperCase().padStart(8,'0'));
+    if(hexVal !== el.textContent && i !== 0) {
+      cell.classList.add('changed');
+      setTimeout(() => cell.classList.remove('changed'), 600);
+    }
+    el.textContent = hexVal;
+    regPrevValues[i] = r.value;
+  });
+}
+
+// =====================================================================
+// CACHE VISUALIZATION
+// =====================================================================
+function updateCache(s) {
+  if(!s.cache) return;
+  renderCachePanel('icacheViz', s.cache.icache);
+  renderCachePanel('dcacheViz', s.cache.dcache);
+}
+
+function renderCachePanel(containerId, c) {
+  const el = document.getElementById(containerId);
+  if(!c || !el) return;
+
+  const hitPct = (c.hit_rate * 100).toFixed(1);
+  const missPct= (100 - c.hit_rate*100).toFixed(1);
+
+  el.innerHTML = `
+    <div class="cache-section">
+      <div class="cache-title">
+        <span>${c.name} — ${(c.size_bytes/1024).toFixed(0)}KB ${c.associativity === 1 ? 'Direct-Mapped' : c.associativity + '-Way'}</span>
+        <span style="color:var(--success)">${hitPct}% hit</span>
+      </div>
+      <div class="cache-hit-bar"><div class="cache-hit-fill" style="width:${hitPct}%"></div></div>
+      <div class="cache-stats">
+        <div class="cache-stat"><div class="val" style="color:var(--success)">${c.hits}</div><div class="lbl">Hits</div></div>
+        <div class="cache-stat"><div class="val" style="color:var(--danger)">${c.misses}</div><div class="lbl">Misses</div></div>
+        <div class="cache-stat"><div class="val">${c.accesses}</div><div class="lbl">Total</div></div>
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:8px">Set State (first ${c.sets?.length||0} sets)</div>
+    <div class="cache-sets-grid">
+      ${(c.sets||[]).flatMap((set,si) => set.map((line,wi) =>
+        `<div class="set-cell ${line.valid?'valid':'invalid'}" title="Set ${si} Way ${wi}: ${line.valid?'Tag '+line.tag:'empty'}"></div>`
+      )).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--text-lo);margin-top:6px">
+      ${c.block_size}B blocks | ${c.num_sets} sets | ${c.policy} replacement
+    </div>
+  `;
+}
+
+// =====================================================================
+// PREDICTOR VISUALIZATION
+// =====================================================================
+function updatePredictor(s) {
+  if(!s.predictor) return;
+  const el = document.getElementById('predictorViz');
+  const p = s.predictor;
+
+  let html = `<div class="cache-title"><span>${p.type || 'Static'} Predictor</span>
+    <span style="color:var(--warn)">${((p.mispred_rate||0)*100).toFixed(1)}% mispred</span></div>`;
+
+  if(p.ghr_binary) {
+    html += `<div class="section-label" style="margin-top:8px">Global History Register (GHR)</div>
+    <div class="ghr-display">
+      ${p.ghr_binary.split('').map(b => `<div class="ghr-bit ${b==='1'?'taken':'not-taken'}">${b}</div>`).join('')}
+    </div>`;
+  }
+
+  if(p.pht_entries) {
+    const stateMap = { SNT:'snt', WNT:'wnt', WT:'wt', ST:'st' };
+    html += `<div class="section-label" style="margin-top:8px">PHT (first ${p.pht_entries.length} entries)</div>
+    <div class="pht-grid">
+      ${p.pht_entries.map(e => `<div class="pht-cell ${stateMap[e.state]||''}" title="Idx ${e.index}: ${e.state}">${e.state}</div>`).join('')}
+    </div>`;
+  }
+
+  if(p.type === 'tournament' && p.chooser) {
+    html += `<div class="section-label" style="margin-top:8px">Chooser (Local vs Global)</div>
+    <div class="pht-grid">
+      ${p.chooser.map(e => `<div class="pht-cell ${e.prefers==='global'?'st':'snt'}" title="${e.prefers}">${e.prefers==='global'?'G':'L'}</div>`).join('')}
+    </div>`;
+  }
+
+  if(p.type === 'static_not_taken') {
+    html += `<div style="text-align:center;padding:20px;color:var(--text-lo);font-size:13px">
+      Always predicts NOT TAKEN.<br>Every branch that takes causes a 2-cycle flush.
+    </div>`;
+  }
+  if(p.type === 'static_taken') {
+    html += `<div style="text-align:center;padding:20px;color:var(--text-lo);font-size:13px">
+      Always predicts TAKEN.<br>Good for loops, bad for forward branches.
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// =====================================================================
+// INSTRUCTION LOG
+// =====================================================================
+function addLog(s) {
+  if(!s.stages) return;
+  const wbStage = s.stages[4];
+  if(wbStage && wbStage.wb_active) {
+    const entry = {
+      cycle: s.cycle,
+      asm: wbStage.asm || '---',
+      wb_rd: wbStage.wb_rd,
+      wb_val: wbStage.wb_value
+    };
+    logEntries.unshift(entry);
+    if(logEntries.length > 50) logEntries.pop();
+    const log = document.getElementById('instrLog');
+    const el = document.createElement('div');
+    el.className = 'log-entry';
+    el.innerHTML = `
+      <span class="log-cycle">#${entry.cycle}</span>
+      <span class="log-stage" style="color:var(--wb-color)">WB</span>
+      <span class="log-instr">${entry.asm}</span>
+      ${entry.wb_rd ? `<span class="log-note">x${entry.wb_rd}←${entry.wb_val}</span>` : ''}`;
+    log.insertBefore(el, log.firstChild);
+    if(log.children.length > 50) log.removeChild(log.lastChild);
+  }
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+async function init() {
+  initRegGrid();
+  try {
+    await loadProgramList();
+    const stateData = await api('GET', '/api/state');
+    updateUI(stateData);
+    // Hide loading overlay
+    const ov = document.getElementById('loadingOverlay');
+    ov.style.opacity = '0';
+    setTimeout(() => ov.remove(), 400);
+    toast('RVSim ready! Select a program to begin.', 'success');
+  } catch(e) {
+    document.querySelector('.loading-text').textContent = 'Failed to connect to simulator. Is RVSim running?';
+    document.querySelector('.loading-spinner').style.borderTopColor = 'var(--danger)';
+  }
+}
+
+window.addEventListener('load', init);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'TEXTAREA') return;
+  if(e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); doStep(1); }
+  if(e.key === 'r' || e.key === 'R') doReset();
+});
+</script>
+</body>
+</html>
