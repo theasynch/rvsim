@@ -10,6 +10,10 @@ which the C++ HTTP server includes and serves directly.
 """
 import sys
 import os
+import io
+
+# Force UTF-8 output so Windows console doesn't choke on unicode
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 def embed(input_path: str, output_path: str):
     with open(input_path, 'r', encoding='utf-8') as f:
@@ -35,7 +39,7 @@ static const char* EMBEDDED_FRONTEND_HTML = R"{DELIMITER}(
         f.write(header)
 
     size_kb = len(html) / 1024
-    print(f"[embed_frontend] {os.path.basename(input_path)} → {os.path.basename(output_path)} ({size_kb:.1f} KB)")
+    print(f"[embed_frontend] {os.path.basename(input_path)} -> {os.path.basename(output_path)} ({size_kb:.1f} KB)")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

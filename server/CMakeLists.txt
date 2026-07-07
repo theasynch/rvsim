@@ -7,16 +7,14 @@ add_library(server_lib STATIC
 target_include_directories(server_lib
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_SOURCE_DIR}/third_party"        # resolves <nlohmann/json.hpp>
+        "${CMAKE_SOURCE_DIR}/third_party/httplib" # resolves <httplib.h>
+        "${CMAKE_SOURCE_DIR}/simulator/include"
 )
-
-find_package(httplib CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
 
 target_link_libraries(server_lib
     PUBLIC
         simulator_lib
-        httplib::httplib
-        nlohmann_json::nlohmann_json
 )
 
 if(WIN32)

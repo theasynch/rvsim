@@ -6,8 +6,8 @@ namespace rv32i {
 GSharePredictor::GSharePredictor(int history_bits)
     : history_bits_(history_bits),
       ghr_(0),
-      ghr_mask_((1 << history_bits) - 1),
-      pht_(1 << history_bits, 0b01) // Weakly Not Taken initial state
+      ghr_mask_((1u << history_bits) - 1),
+      pht_(1u << history_bits, 0b01) // Weakly Not Taken initial state
 {}
 
 bool GSharePredictor::predict(uint32_t pc) {
