@@ -91,31 +91,31 @@ Load a program, step through it cycle by cycle, and **watch every instruction fl
 
 ## 🚀 Quick Start
 
-### For End Users (No Build Required)
-
-```
-1. Download  RVSim.exe  from the Releases page
-2. Double-click it
-3. Your browser opens to localhost:8080
-4. Select a program → press Step or Run → explore
-```
-
-> **Requirements:** Windows 10/11. Nothing else.
-
-### For Developers (Building from Source)
+### Option A — Build & Run (Recommended)
 
 ```powershell
-# Clone the repo
-git clone https://github.com/yourusername/rvsim.git
-cd rvsim
+# 1. Clone the repo
+git clone https://github.com/theasynch/coa-prj.git
+cd coa-prj
 
-# One-shot setup (installs vcpkg, configures CMake, builds)
-.\setup.ps1
+# 2. Configure CMake (no package manager needed — headers are bundled)
+$cmake = "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+& $cmake -B build -S .
+
+# 3. Build
+& $cmake --build build --config Release
+
+# 4. Run — browser opens automatically
+.\bin\Release\RVSim.exe
 ```
 
-> **Requirements:** Visual Studio 2022 (Desktop C++ workload), Git, Python 3
+> **Requirements:** Visual Studio 2022 (Desktop C++ workload). That's it.
 
-The output binary is at `bin\Release\RVSim.exe`. It has **zero DLL dependencies** — copy it anywhere.
+### Option B — Download Pre-built Exe
+
+Grab the latest `RVSim.exe` from the [**Releases page**](https://github.com/theasynch/coa-prj/releases/latest) — no installation, just double-click.
+
+> **Requirements:** Windows 10/11. Nothing else.
 
 ---
 
