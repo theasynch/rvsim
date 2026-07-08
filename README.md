@@ -16,7 +16,7 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue?style=flat-square&logo=cplusplus)](https://isocpp.org/)
 [![RISC-V](https://img.shields.io/badge/ISA-RV32I-orange?style=flat-square)](https://riscv.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
-[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)](LICENSE)
 [![Build](https://img.shields.io/badge/build-CMake%204.3-red?style=flat-square&logo=cmake)](https://cmake.org/)
 
 <br/>
