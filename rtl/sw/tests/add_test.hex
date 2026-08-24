@@ -1,0 +1,63 @@
+// Hand-assembled add_test.hex for rv32i_top simulation
+// This is the add_test.s program hand-assembled to hex.
+// Each line is one 32-bit instruction word.
+//
+// addi  x1, x0, 10         # 0x00A00093
+// addi  x2, x0, 20         # 0x01400113
+// add   x3, x1, x2         # 0x002081B3
+// sub   x4, x1, x2         # 0x40208233
+// addi  x5, x0, 0xFF       # 0x0FF00293
+// andi  x5, x5, 0xFF       # 0x0FF2F293
+// lui   x6, 0              # 0x00000337
+// addi  x6, x0, 0x0F       # 0x00F00313
+// ori   x6, x6, -256       # 0xF0036313  (0xFF00 sign-extended = 0xFFFFFF00)
+// addi  x7, x0, 0xFF       # 0x0FF00393
+// xori  x7, x7, 0xFF       # 0x0FF3C393
+// slli  x8, x1, 2          # 0x00209413
+// srli  x9, x2, 2          # 0x00215493
+// slt   x10, x1, x2        # 0x0020A533
+// slt   x11, x2, x1        # 0x001125B3
+// lui   x12, 0x12345        # 0x12345637
+// addi  x13, x0, -32       # 0xFE000693
+// srai  x13, x13, 2        # 0x4026D693
+// sltu  x14, x2, x1        # 0x00113733
+// sltu  x15, x1, x2        # 0x0020B7B3
+// and   x16, x1, x2        # 0x0020F833
+// or    x17, x1, x2        # 0x0020E8B3
+// xor   x18, x1, x2        # 0x0020C933
+// sll   x19, x1, x2        # 0x002099B3
+// srl   x20, x2, x1        # 0x00A15A33
+// slti  x21, x1, 20        # 0x0140AAB3 → actually: 0x0140A A93
+// slti  x22, x2, 10        # 0x00A12B13
+// sltiu x23, x1, 20        # 0x0140BBB3 → actually: 0x0140B B93
+// ecall                     # 0x00000073
+
+00A00093
+01400113
+002081B3
+40208233
+0FF00293
+0FF2F293
+00000337
+00F00313
+F0036313
+0FF00393
+0FF3C393
+00209413
+00215493
+0020A533
+001125B3
+12345637
+FE000693
+4026D693
+00113733
+0020B7B3
+0020F833
+0020E8B3
+0020C933
+002099B3
+00A15A33
+0140AA93
+00A12B13
+0140BB93
+00000073

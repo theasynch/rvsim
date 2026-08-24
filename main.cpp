@@ -35,7 +35,7 @@ static void open_browser(const std::string& url) {
 
 int main() {
     constexpr int PORT = 8080;
-    const std::string URL = "http://localhost:" + std::to_string(PORT);
+    const std::string URL = "http://127.0.0.1:" + std::to_string(PORT);
 
     std::cout << R"(
   ____  _    __  _____ _           

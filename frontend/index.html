@@ -1195,7 +1195,7 @@ body {
 // RVSim Frontend — JavaScript
 // =====================================================================
 
-const API = window.location.origin;
+const API = '';
 let state = null;
 let running = false;
 let selectedProgram = null;
@@ -1834,7 +1834,7 @@ async function init() {
     setTimeout(() => ov.remove(), 400);
     toast('RVSim ready! Select a program to begin.', 'success');
   } catch(e) {
-    document.querySelector('.loading-text').textContent = 'Failed to connect to simulator. Is RVSim running?';
+    document.querySelector('.loading-text').innerHTML = `Failed to connect. Error: <br><span style="color:red">${e.message}</span>`;
     document.querySelector('.loading-spinner').style.borderTopColor = 'var(--danger)';
   }
 }

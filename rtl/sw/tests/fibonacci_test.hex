@@ -1,0 +1,139 @@
+// fibonacci_asm.hex — Fibonacci(10) in hand-assembled RV32I
+// Computes F(10) = 55 iteratively, stores result in x10 (a0).
+//
+//     addi x1, x0, 10     # n = 10          → 00A00093
+//     addi x2, x0, 0      # prev = 0        → 00000113
+//     addi x3, x0, 1      # curr = 1        → 00100193
+//     addi x4, x0, 2      # i = 2           → 00200213
+// loop:
+//     bgt  x4, x1, done   → blt x1, x4 → we use BGE x4,x1 which is wrong...
+//     Let me use BLT properly:
+//     blt  x1, x4, done   # if n < i, done  → 0040C663 (offset = +12 → done is 3 instrs ahead)
+//
+// Actually let me be more careful with encoding:
+//
+// Addr  Instruction                    Hex
+// 0x00  addi x1, x0, 10               00A00093
+// 0x04  addi x2, x0, 0                00000113
+// 0x08  addi x3, x0, 1                00100193
+// 0x0C  addi x4, x0, 2                00200213
+// loop (0x10):
+// 0x10  blt  x1, x4, done(0x28)       # if x1 < x4 (n < i), jump to done
+//       B-type: imm=0x28-0x10=0x18=24, rs1=x1, rs2=x4, funct3=100(BLT)
+//       imm[12|10:5]=0|00_0000, imm[4:1|11]=1100|0
+//       Wait, imm=24: binary = 0_0000_0001_1000
+//       imm[12]=0, imm[11]=0, imm[10:5]=000001, imm[4:1]=1000
+//       [imm12|imm10:5 | rs2 | rs1 | f3  | imm4:1|imm11 | opcode]
+//       [0    |000001  |00100|00001|100   |1000  |0      |1100011]
+//       = 0000_0100_0100_0000_1100_0100_0110_0011
+//       = 0x0040C463 — wait let me recount
+//       Actually offset 0x18 = 24 decimal
+//       imm[12:1] = 24 >> 1 = 12 = 0b0000_0000_1100
+//       imm[12]   = 0
+//       imm[11]   = 0
+//       imm[10:5] = 0b000001 (wait, 12 = 0b0000_0000_1100, imm[10:5] = bits[10:5] = 000000)
+//       Hmm, let me reconsider. offset = 24 bytes, for B-type imm represents the offset.
+//       24 in binary = 0b0...011000
+//       imm[12]   = bit 12 = 0
+//       imm[11]   = bit 11 = 0
+//       imm[10:5] = bits [10:5] = 000000
+//       imm[4:1]  = bits [4:1] = 1100
+//       instr[31]    = imm[12] = 0
+//       instr[30:25] = imm[10:5] = 000000
+//       instr[24:20] = rs2 = x4 = 00100
+//       instr[19:15] = rs1 = x1 = 00001
+//       instr[14:12] = funct3 = 100 (BLT)
+//       instr[11:8]  = imm[4:1] = 1100
+//       instr[7]     = imm[11] = 0
+//       instr[6:0]   = 1100011
+//       = 0_000000_00100_00001_100_1100_0_1100011
+//       = 0000 0000 0100 0000 1100 1100 0110 0011
+//       = 0x004 0CC 63 → 0x0040CC63
+//
+// Let me just use a simpler approach and compute carefully:
+//
+// 0x00: addi x1, x0, 10        00A00093
+// 0x04: addi x2, x0, 0         00000113
+// 0x08: addi x3, x0, 1         00100193
+// 0x0C: addi x4, x0, 2         00200213
+// 0x10: blt  x1, x4, 0x24      0040C863  (offset = 0x24-0x10 = 0x14 = 20)
+//       20 = 0b10100, imm[4:1]=1010, imm[11]=0, imm[10:5]=000000, imm[12]=0
+//       [0|000000|00100|00001|100|1010|0|1100011]
+//       = 0000_0000_0100_0000_1100_1010_0110_0011
+//       = 0x0040CA63
+// 0x14: add  x5, x2, x3        003101B3 → wait, rd=x5=00101
+//       [0000000|00011|00010|000|00101|0110011]
+//       = 0000_0000_0011_0001_0000_0010_1011_0011
+//       = 0x003102B3
+// 0x18: add  x2, x3, x0        000180B3 → rd=x2, rs1=x3, rs2=x0
+//       [0000000|00000|00011|000|00010|0110011]
+//       = 0x00018133
+// 0x1C: add  x3, x5, x0        00028193 → rd=x3, rs1=x5, rs2=x0
+//       [0000000|00000|00101|000|00011|0110011]
+//       = 0x000281B3
+// 0x20: addi x4, x4, 1         00120213
+// 0x24: jal  x0, loop(0x10)    offset = 0x10-0x24 = -0x14 = -20
+//       Wait, I need to jump BACK. Let me reorganize:
+//       At 0x20, after incrementing i, jump back to 0x10
+//       jal x0, 0x10: offset = 0x10 - 0x20 = -16 = -0x10
+//       Actually let me swap: increment i, then jump back
+//
+// Let me redo this cleanly:
+//
+// 0x00: addi x1, x0, 10        # n = 10
+// 0x04: addi x2, x0, 0         # prev = 0
+// 0x08: addi x3, x0, 1         # curr = 1
+// 0x0C: addi x4, x0, 2         # i = 2
+// LOOP at 0x10:
+// 0x10: blt  x1, x4, DONE(0x28) # if n < i, branch to DONE (offset=0x18=24)
+// 0x14: add  x5, x2, x3        # next = prev + curr
+// 0x18: addi x2, x3, 0         # prev = curr (mv x2, x3)
+// 0x1C: addi x3, x5, 0         # curr = next (mv x3, x5)
+// 0x20: addi x4, x4, 1         # i++
+// 0x24: jal  x0, LOOP(0x10)    # jump back to LOOP (offset = 0x10-0x24 = -0x14 = -20)
+// DONE at 0x28:
+// 0x28: addi x10, x3, 0        # a0 = curr (result)
+// 0x2C: ecall                   # halt
+//
+// Now encode each:
+// blt x1, x4, +24:  offset=24=0b0_0000_0001_1000
+//   imm[12]=0, imm[10:5]=000000, imm[4:1]=1100, imm[11]=0
+//   [0|000000|00100|00001|100|1100|0|1100011] = 0x0040CC63
+//
+// add x5, x2, x3:
+//   [0000000|00011|00010|000|00101|0110011] = 0x003102B3
+//
+// addi x2, x3, 0:  (mv x2, x3)
+//   [000000000000|00011|000|00010|0010011] = 0x00018113
+//
+// addi x3, x5, 0:  (mv x3, x5)
+//   [000000000000|00101|000|00011|0010011] = 0x00028193
+//
+// addi x4, x4, 1:
+//   [000000000001|00100|000|00100|0010011] = 0x00120213
+//
+// jal x0, -20:  offset = -20 = 0b1_1111_1110_1100 (13-bit signed)
+//   Actually J-type imm is 21 bits: -20 = 0xFFFFFFEC, imm[20:1] = ...
+//   -20 in 21 bits: 1_1111_1111_1111_0_1100
+//   imm[20]=1, imm[10:1]=1111101100, imm[11]=1, imm[19:12]=11111111
+//   [1|1111101100|1|11111111|00000|1101111]
+//   = 1111_1110_1100_1111_1111_1000_0110_1111
+//   = 0xFECFF06F
+//
+// addi x10, x3, 0:  (mv x10, x3)
+//   [000000000000|00011|000|01010|0010011] = 0x00018513
+//
+// ecall: 0x00000073
+
+00A00093
+00000113
+00100193
+00200213
+0040CC63
+003102B3
+00018113
+00028193
+00120213
+FECFF06F
+00018513
+00000073

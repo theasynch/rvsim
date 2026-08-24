@@ -7,7 +7,7 @@ $ProjectRoot = $PSScriptRoot
 
 Write-Host ""
 Write-Host "  =============================" -ForegroundColor Cyan
-Write-Host "  RVSim — Build Setup" -ForegroundColor Cyan
+Write-Host "  RVSim - Build Setup" -ForegroundColor Cyan
 Write-Host "  =============================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -49,7 +49,7 @@ try {
         $CMake = $vsCMake
         Write-Host "      Found VS-bundled CMake" -ForegroundColor Green
     } else {
-        Write-Host "ERROR: CMake not found. Open VS Installer → Modify → C++ → tick 'CMake tools'" -ForegroundColor Red
+        Write-Host "ERROR: CMake not found. Open VS Installer -> Modify -> C++ -> tick 'CMake tools'" -ForegroundColor Red
         exit 1
     }
 }
@@ -70,7 +70,7 @@ try {
 # -----------------------------------------------------------------------
 # Step 4: CMake configure  
 # -----------------------------------------------------------------------
-Write-Host "[4/5] Configuring CMake (this installs vcpkg packages — may take a few minutes)..." -ForegroundColor Yellow
+Write-Host "[4/5] Configuring CMake (this installs vcpkg packages - may take a few minutes)..." -ForegroundColor Yellow
 
 $BuildDir = Join-Path $ProjectRoot "build"
 
@@ -109,7 +109,4 @@ Write-Host "  To run: .\bin\Release\RVSim.exe" -ForegroundColor Cyan
 Write-Host ""
 
 # Offer to launch
-$launch = Read-Host "Launch RVSim now? (y/n)"
-if ($launch -eq 'y' -or $launch -eq 'Y') {
-    Start-Process "$ProjectRoot\bin\Release\RVSim.exe"
-}
+# Removed prompt

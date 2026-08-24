@@ -2,7 +2,7 @@
 // api_server.h — Embedded HTTP REST API Server
 // =============================================================================
 #pragma once
-#include "core/pipeline.h"
+#include "rtl_pipeline.h"
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <memory>
@@ -26,7 +26,7 @@ private:
     int port_;
     std::atomic<bool> running_{false};
     httplib::Server   svr_;
-    std::unique_ptr<rv32i::Pipeline> pipeline_;
+    std::unique_ptr<rv32i::RtlPipeline> pipeline_;
     rv32i::PipelineConfig config_;
 
     // ---------- route handlers ----------
