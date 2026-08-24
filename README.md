@@ -9,468 +9,303 @@
 ╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝╚═╝     ╚═╝
 ```
 
-### **Cycle-Accurate RISC-V Pipeline & Memory Hierarchy Simulator**
+### **RISC-V Processor Simulation & Visualization Tool**
+*Computer Architecture — 30 Mark Project*
 
-*A fully interactive, standalone desktop application for learning computer architecture*
-
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue?style=flat-square&logo=cplusplus)](https://isocpp.org/)
-[![RISC-V](https://img.shields.io/badge/ISA-RV32I-orange?style=flat-square)](https://riscv.org/)
-[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
+[![Status](https://img.shields.io/badge/status-Planning%20Phase-blue?style=flat-square)]()
+[![ISA](https://img.shields.io/badge/ISA-RV32I-orange?style=flat-square)](https://riscv.org/)
+[![RTL](https://img.shields.io/badge/RTL-SystemVerilog-blueviolet?style=flat-square)]()
+[![Sim](https://img.shields.io/badge/Sim-Verilator-green?style=flat-square)]()
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)](LICENSE)
-[![Build](https://img.shields.io/badge/build-CMake%204.3-red?style=flat-square&logo=cmake)](https://cmake.org/)
-
-<br/>
-
-> **Double-click `RVSim.exe` → browser opens → start learning.**  
-> No Python. No Node.js. No installation. One file.
-
-<br/>
 
 </div>
 
 ---
 
-## ✨ What is RVSim?
+## 📌 Project Idea
 
-RVSim is a **cycle-accurate microarchitecture simulator** for the RISC-V RV32I instruction set. It models a classic textbook 5-stage in-order pipeline — the same architecture taught in every computer architecture course — with a beautiful interactive web interface embedded directly in the executable.
+Most computer architecture simulators are either too academic (just a textbook diagram) or too complex (industry tools that require a PhD to operate). There is no tool a professor can hand to a student, have them run in 10 seconds, and use it to *see* a processor thinking — cycle by cycle.
 
-Load a program, step through it cycle by cycle, and **watch every instruction flow through Fetch → Decode → Execute → Memory → Writeback** in real time. Toggle forwarding on/off to see stalls appear. Swap branch predictors and watch the misprediction rate change. Resize the cache and observe miss rates. Every concept you learned in lecture, made tangible.
+**RVSim** is that tool.
 
----
+It is an interactive, standalone desktop application that simulates a RISC-V RV32I processor at the cycle level. A professor downloads one file, double-clicks it, and a browser opens showing a live 5-stage pipeline diagram. They load a program, press Step, and watch every instruction travel through Fetch → Decode → Execute → Memory → Writeback in real time. They can toggle forwarding on and off, swap branch predictors, resize the cache, and immediately see how each decision affects performance.
 
-## 🎬 Feature Overview
-
-<table>
-<tr>
-<td width="50%">
-
-### 🔄 5-Stage Pipeline
-- Cycle-accurate **IF → ID → EX → MEM → WB**
-- Live pipeline diagram updates every cycle
-- **Stall** visualization (load-use hazards)
-- **Flush** visualization (branch mispredictions)
-- **Forwarding paths** shown as animated overlays
-
-</td>
-<td width="50%">
-
-### 🧠 Branch Prediction
-- **Static Not-Taken** — always predict not taken
-- **Static Taken** — always predict taken
-- **2-Bit Saturating Counter** — FSM with 4 states
-- **GShare** — XOR of PC and global history
-- **Tournament** — hybrid local + global + chooser
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 💾 Cache Hierarchy
-- **Direct-Mapped**, N-way Set-Associative, Fully-Associative
-- **LRU** and **FIFO** replacement policies
-- Separate **I-Cache** and **D-Cache**
-- Hit/miss rate tracking and set-state visualization
-- Configurable size (1KB → 32KB)
-
-</td>
-<td width="50%">
-
-### ⌨️ In-Browser Assembler
-- Type **RISC-V assembly** directly in the app
-- All 47 RV32I instructions supported
-- Common pseudo-instructions: `NOP`, `MV`, `LI`, `RET`, `J`, `BEQZ`, `BNEZ`
-- Label support for branches and jumps
-- Instant error feedback
-
-</td>
-</tr>
-</table>
+The goal is not just to build a simulator — it is to make pipeline concepts *viscerally obvious* to someone who has only ever seen them as static diagrams on a slide.
 
 ---
 
-## 🚀 Quick Start
+## 🎯 What the Final Product Does
 
-### Option A — Build & Run (Recommended)
+When complete, a professor or student will:
 
-```powershell
-# 1. Clone the repo
-git clone https://github.com/theasynch/coa-prj.git
-cd coa-prj
+1. **Download `RVSim.exe`** — a single file, ~1MB, no installation
+2. **Double-click it** — a browser opens at `localhost:8080` automatically
+3. **Select a program** from a built-in library (Fibonacci, bubble sort, matrix multiply, etc.) or **type their own RISC-V assembly** directly in the browser
+4. **Step through execution cycle by cycle**, watching:
+   - Instructions flowing through all 5 pipeline stages simultaneously
+   - Stall bubbles appearing on load-use hazards
+   - Flush events on branch mispredictions
+   - Register values updating in real time
+   - Cache sets being filled, hits and misses counted
+5. **Change configurations** mid-run: swap the branch predictor, change cache associativity, toggle data forwarding — and immediately see the IPC and miss rate change
 
-# 2. Configure CMake (no package manager needed — headers are bundled)
-$cmake = "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-& $cmake -B build -S .
-
-# 3. Build
-& $cmake --build build --config Release
-
-# 4. Run — browser opens automatically
-.\bin\Release\RVSim.exe
-```
-
-> **Requirements:** Visual Studio 2022 (Desktop C++ workload). That's it.
-
-### Option B — Download Pre-built Exe
-
-Grab the latest `RVSim.exe` from the [**Releases page**](https://github.com/theasynch/coa-prj/releases/latest) — no installation, just double-click.
-
-> **Requirements:** Windows 10/11. Nothing else.
+No Python. No Node.js. No Verilator. No toolchain. One file.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Planned Architecture
+
+The project has two major technical layers that both model the same processor:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          RVSim.exe                                  │
-│                                                                     │
-│   ┌─────────────────────────────────────────────────────────────┐  │
-│   │                    C++ Simulator Core                        │  │
-│   │                                                             │  │
-│   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │  │
-│   │  │ISA Decode│  │ Pipeline │  │  Branch  │  │  Cache   │   │  │
-│   │  │ RV32I    │→ │IF ID EX  │← │Predictors│  │ L1 I & D │   │  │
-│   │  │ 47 instrs│  │MEM  WB   │  │ ×4 types │  │ LRU/FIFO │   │  │
-│   │  └──────────┘  └────┬─────┘  └──────────┘  └──────────┘   │  │
-│   │                     │  Hazard Unit + Forwarding Unit        │  │
-│   └─────────────────────┼───────────────────────────────────────┘  │
-│                         │ JSON over REST API                        │
-│   ┌─────────────────────▼───────────────────────────────────────┐  │
-│   │              Embedded HTTP Server (cpp-httplib)              │  │
-│   │         POST /api/step   GET /api/state   POST /api/load    │  │
-│   └─────────────────────┬───────────────────────────────────────┘  │
-│                         │ Serves embedded HTML/CSS/JS               │
-└─────────────────────────┼───────────────────────────────────────────┘
-                          │
-                    localhost:8080
-                          │
-              ┌───────────▼────────────┐
-              │   User's Browser       │
-              │  Pipeline Visualizer   │
-              │  Register File Viewer  │
-              │  Cache State Display   │
-              │  Predictor PHT/GHR     │
-              │  In-Browser Assembler  │
-              └────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           RVSim — System Overview                       │
+│                                                                         │
+│   ┌──────────────────────────┐      ┌──────────────────────────────┐   │
+│   │   SystemVerilog RTL      │      │   C++ Behavioral Simulator   │   │
+│   │   (Actual Hardware)      │      │   (Drives the Web UI)        │   │
+│   │                          │      │                              │   │
+│   │  rv32i_top.sv            │      │  pipeline.cpp                │   │
+│   │  alu.sv                  │      │  decoder.cpp                 │   │
+│   │  hazard_unit.sv          │ same │  hazard_unit.cpp             │   │
+│   │  forwarding_unit.sv      │design│  forwarding_unit.cpp         │   │
+│   │  register_file.sv        │      │  cache.cpp                   │   │
+│   │  imem.sv / dmem.sv       │      │  branch predictors           │   │
+│   └──────────┬───────────────┘      └──────────────┬───────────────┘   │
+│              │                                      │                   │
+│              ▼                                      ▼                   │
+│      Verilator → C++                      Embedded HTTP Server          │
+│      .vcd waveforms                       REST API (cpp-httplib)        │
+│      (GTKWave)                            Serves embedded frontend      │
+│                                                     │                   │
+│                                                     ▼                   │
+│                                           localhost:8080                │
+│                                           Interactive Web UI            │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Design Decisions
+### Why Two Implementations?
 
-| Decision | Rationale |
-|----------|-----------|
-| **C++ simulator core** | Performance + academic credibility; signals the simulator is serious |
-| **Embedded HTTP server** | Self-contained `.exe`; no Electron bloat, no Node.js required |
-| **Frontend baked into binary** | `embed_frontend.py` converts HTML → C++ `const char*` at build time |
-| **Static MSVC runtime** | `/MT` flag means zero DLL dependencies on end-user machines |
-| **REST API + JSON** | Clean separation; frontend can run independently during development |
+| Layer | Purpose |
+|-------|---------|
+| **SystemVerilog RTL** | Actual synthesizable hardware — can be run on an FPGA, waveforms can be analyzed in GTKWave. Proves the design is architecturally sound. |
+| **C++ Behavioral Simulator** | Fast, flexible, drives the web interface. Can be extended with features (branch predictors, cache) that would require significant hardware to simulate in RTL. |
+
+Both are designed from the same architectural specification. The RTL is the hardware; the C++ is the software model of that hardware.
 
 ---
 
-## 🔬 The Pipeline — In Detail
+## 🔩 Planned Modules
 
-```
-                    RISC-V 5-Stage In-Order Pipeline
+### Layer 1 — SystemVerilog RTL (`rtl/`)
 
-  ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐
-  │   IF   │───▶│   ID   │───▶│   EX   │───▶│  MEM   │───▶│   WB   │
-  │        │    │        │    │        │    │        │    │        │
-  │ Fetch  │    │ Decode │    │  ALU   │    │ D-Cache│    │ RegFile│
-  │ I-Cache│    │ RegRead│    │ Branch │    │ Load / │    │  Write │
-  │ PC+4   │    │ Control│    │ Forward│    │  Store │    │        │
-  └────────┘    └────────┘    └────────┘    └────────┘    └────────┘
-      ▲              │              │              │
-      │         IF/ID reg      ID/EX reg      EX/MEM reg
-      │         (flip-flop)   (flip-flop)    (flip-flop)
-      │                            │
-      │              ◄─────────────┘  Forwarding (EX→EX, MEM→EX)
-      │
-      └──── Hazard Unit: stall PC + IF/ID on load-use hazard
-            Branch Unit: flush IF + ID on taken branch (2-cycle penalty)
-```
+| Module | File | Description |
+|--------|------|-------------|
+| **ISA Package** | `pkg/rv32i_pkg.sv` | All type definitions: opcodes, ALU ops, forwarding selectors, pipeline register structs |
+| **Top-Level Processor** | `core/rv32i_top.sv` | Instantiates and wires all units; contains the 4 pipeline registers |
+| **Control Unit** | `core/control_unit.sv` | Decodes opcode/funct3/funct7 into control signals for every stage |
+| **ALU** | `datapath/alu.sv` | 32-bit combinational ALU: ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND |
+| **Branch Comparator** | `datapath/branch_comp.sv` | Evaluates BEQ, BNE, BLT, BGE, BLTU, BGEU using forwarded register values |
+| **Immediate Generator** | `datapath/imm_gen.sv` | Sign-extends immediates for all 6 RV32I instruction formats (R/I/S/B/U/J) |
+| **Register File** | `datapath/register_file.sv` | 32 × 32-bit registers; x0 hardwired to zero; synchronous write, async read |
+| **Hazard Detection Unit** | `hazard/hazard_unit.sv` | Detects load-use hazards; generates stall_if, stall_id, flush_id, flush_ex |
+| **Forwarding Unit** | `hazard/forwarding_unit.sv` | Detects EX/MEM → EX and MEM/WB → EX data hazards; selects bypass path |
+| **Instruction Memory** | `memory/imem.sv` | Read-only synchronous memory; loads programs from `.hex` files |
+| **Data Memory** | `memory/dmem.sv` | Read/write byte-addressable memory; supports LB/LH/LW/SB/SH/SW |
 
-### Hazard Types Handled
+### Layer 2 — C++ Behavioral Simulator (`simulator/`)
 
-| Hazard | Type | Detection | Resolution |
-|--------|------|-----------|------------|
-| `LW x1` → `ADD x3,x1,x2` | Load-Use (RAW) | ID_EX.MemRead ∧ ID_EX.Rd == IF_ID.Rs1 | Stall 1 cycle, insert bubble |
-| `ADD x1` → `ADD x3,x1,x2` | EX hazard (RAW) | EX_MEM.RegWrite ∧ EX_MEM.Rd == ID_EX.Rs1 | Forward EX/MEM → EX |
-| `SUB x1` 2 cycles ago → use | MEM hazard (RAW) | MEM_WB.RegWrite ∧ MEM_WB.Rd == ID_EX.Rs1 | Forward MEM/WB → EX |
-| Branch taken | Control | branch_taken in EX stage | Flush IF + ID (2 cycles) |
+| Module | Description |
+|--------|-------------|
+| **ISA Decoder** | Full RV32I decode: all 47 instructions, all 6 formats, produces control signals |
+| **Pipeline Engine** | Cycle-accurate 5-stage simulation with pipeline registers as C++ structs |
+| **Register File** | 32 × 32-bit register file with ABI name mapping |
+| **Memory Model** | Flat 16MB byte-addressable memory with hex program loader |
+| **Hazard Unit** | Load-use detection, stall/flush signal generation |
+| **Forwarding Unit** | EX/MEM and MEM/WB bypass path computation |
+| **Branch Predictors** | Static Not-Taken, Static Taken, 2-Bit Saturating, GShare, Tournament |
+| **Cache Model** | Configurable L1 I-Cache and D-Cache: any size, associativity, LRU or FIFO |
+| **Performance Counters** | IPC, stall cycles, flush cycles, miss rate, misprediction rate |
 
----
+### Layer 3 — Web Interface (`frontend/`)
 
-## 🧩 Branch Predictors — How They Work
+| Feature | Description |
+|---------|-------------|
+| **Pipeline Diagram** | Live 5-stage visualization; highlights stalls (yellow), flushes (red), forwarding (green) |
+| **Register Viewer** | All 32 ABI registers; flashes on write |
+| **Cache State** | Set/way occupancy visualization; hit/miss bar |
+| **Predictor Internals** | PHT (Pattern History Table) and GHR (Global History Register) state |
+| **Statistics Panel** | IPC, cycle count, stall cycles, flush cycles, misprediction rate, miss rate |
+| **Assembly Editor** | Type RV32I assembly in the browser; assembles and loads instantly |
 
-### 1. Static Not-Taken
-Predicts every branch as **not taken**. Simple, cheap, terrible for loops.
-```
-predict(pc) → always false
-update(pc, taken) → if taken: misprediction++
-```
+### Layer 4 — HTTP Server (`server/`)
 
-### 2. 2-Bit Saturating Counter
-A 4-state FSM per PC entry. Requires two consecutive wrong outcomes to flip prediction.
-```
-States: SNT(00) ──taken──▶ WNT(01) ──taken──▶ WT(10) ──taken──▶ ST(11)
-                ◀─not──           ◀─not──           ◀─not──
-Predict TAKEN if state ≥ 10 (WT or ST)
-```
-
-### 3. GShare
-XORs the PC with a **Global History Register** (GHR) to index the PHT. Exploits *branch correlation* — the outcome of branch B often depends on earlier branches.
-```
-index = PC[k+1:2] XOR GHR[k-1:0]
-GHR  = shift-left, insert new outcome at bit 0
-```
-
-### 4. Tournament
-Combines a local predictor (2-bit indexed by PC) and global predictor (GShare), with a **chooser** that learns which is more accurate per branch.
-```
-chooser[pc] ∈ {0,1} → prefer local
-              {2,3} → prefer global
-Update: if local_correct ∧ ¬global_correct → prefer local more
-```
+| Component | Description |
+|-----------|-------------|
+| **Embedded Server** | `cpp-httplib` running on `localhost:8080` — no separate install |
+| **REST API** | `POST /api/step`, `POST /api/run`, `POST /api/load`, `GET /api/state` etc. |
+| **Frontend Embedding** | `tools/embed_frontend.py` bakes `index.html` into a C++ string at build time |
 
 ---
 
-## 💾 Cache Organization
+## 📐 The Pipeline — Design Specification
 
 ```
-Address decomposition (32-bit):
-┌─────────────────┬─────────────┬──────────────────┐
-│      TAG        │    INDEX    │   BLOCK OFFSET   │
-│  32-idx-off bits│  idx bits   │    off bits      │
-└─────────────────┴─────────────┴──────────────────┘
+              RISC-V 5-Stage In-Order Pipeline (RV32I)
 
-Where:
-  offset_bits = log₂(block_size)        e.g. 64B blocks → 6 bits
-  index_bits  = log₂(num_sets)          e.g. 32 sets    → 5 bits
-  tag_bits    = 32 - offset - index     = 21 bits
-
-num_sets = size / (block_size × associativity)
+  ┌─────────┐  IF/ID  ┌─────────┐  ID/EX  ┌─────────┐  EX/MEM ┌─────────┐  MEM/WB ┌─────────┐
+  │   IF    │════════▶│   ID    │════════▶│   EX    │════════▶│   MEM   │════════▶│   WB    │
+  │         │  reg    │         │  reg    │         │  reg    │         │  reg    │         │
+  │ Fetch   │         │ Decode  │         │  ALU    │         │ D-Cache │         │ RegFile │
+  │ I-Cache │         │ RegRead │         │ Branch  │         │  Load / │         │  Write  │
+  │ PC + 4  │         │ ImmGen  │         │ Forward │         │  Store  │         │         │
+  └─────────┘         └─────────┘         └─────────┘         └─────────┘         └─────────┘
+                           │                   ▲
+                           │    Forwarding ─────┤ EX/MEM → EX (1-cycle old result)
+                           │    Unit       ─────┘ MEM/WB → EX (2-cycle old result)
+                           │
+                      Hazard Unit ──── detects load-use ──── asserts stall_if, stall_id
+                                  ──── detects branch    ──── asserts flush_id, flush_ex
 ```
 
-| Config | num_sets | Conflict misses | Capacity misses |
-|--------|----------|----------------|-----------------|
-| Direct-mapped (1-way) | High | High — two addresses can fight over the same set | Low |
-| 4-way set-assoc | Medium | Lower — 4 candidates per set | Medium |
-| Fully-associative | 1 | Zero — any block goes anywhere | Lowest |
+### Hazard Handling Plan
+
+| Hazard | When | Detected By | Resolution |
+|--------|------|-------------|------------|
+| **Load-Use RAW** | `LW x1` then `ADD x3,x1,x2` | `id_ex_mem_read AND id_ex_rd == if_id_rs` | Stall 1 cycle, insert NOP bubble |
+| **EX→EX RAW** | `ADD x1` then `ADD x3,x1,x2` | `ex_mem_regwrite AND ex_mem_rd == id_ex_rs` | Forward EX/MEM result to EX input |
+| **MEM→EX RAW** | `ADD x1` 2 cycles ago, now used | `mem_wb_regwrite AND mem_wb_rd == id_ex_rs` | Forward MEM/WB result to EX input |
+| **Control Hazard** | Branch taken / JAL / JALR | Branch resolved in EX | Flush IF and ID (2 penalty cycles) |
 
 ---
 
-## 📡 REST API Reference
+## 📅 Project Timeline
 
-The simulator exposes a simple REST API. Every response is JSON.
-
-| Method | Endpoint | Body | Returns |
-|--------|---------|------|---------|
-| `GET` | `/` | — | Frontend HTML |
-| `POST` | `/api/load` | `{"builtin":"fibonacci"}` or `{"hex":"..."}` | Pipeline state |
-| `POST` | `/api/config` | `{"predictor":"gshare","forwarding":true}` | Config echo |
-| `POST` | `/api/step` | `{"cycles":1}` | Pipeline state after N cycles |
-| `POST` | `/api/run` | `{"max_cycles":100000}` | Final pipeline state |
-| `POST` | `/api/reset` | — | Fresh pipeline state |
-| `GET` | `/api/state` | — | Current pipeline state |
-| `GET` | `/api/programs` | — | List of built-in programs |
-
-### Example State Response
-
-```json
-{
-  "cycle": 42,
-  "halted": false,
-  "stall": false,
-  "flush": true,
-  "stages": [
-    { "stage": "IF",  "asm": "LW x1, 0(x4)",     "pc_hex": "0x00000050", "bubble": false },
-    { "stage": "ID",  "asm": "ADD x3, x1, x2",    "pc_hex": "0x0000004C", "bubble": false },
-    { "stage": "EX",  "asm": "BEQ x5, x6, +8",    "pc_hex": "0x00000048", "forward_a": "MEM_WB" },
-    { "stage": "MEM", "asm": "SW x7, 4(x8)",       "pc_hex": "0x00000044", "cache_hit": true },
-    { "stage": "WB",  "asm": "ADDI x10, x0, 55",  "pc_hex": "0x00000040", "wb_active": true }
-  ],
-  "stats": {
-    "cycles": 42, "instructions": 35, "ipc": 0.833,
-    "stall_cycles": 3, "flush_cycles": 4,
-    "branch_count": 8, "mispredictions": 2, "mispred_rate": 0.25,
-    "cache_accesses": 42, "cache_hits": 38, "miss_rate": 0.095
-  }
-}
-```
+| Review | Date | What Will Be Shown |
+|--------|------|--------------------|
+| **Review 1** | August 28, 2026 | Project proposal, architecture design, module specifications, implementation plan *(this document)* |
+| **Review 2** | September 15, 2026 | Working pipeline simulator, live hazard/forwarding demo, basic cache visualization, web UI running |
+| **Final Review** | October 13, 2026 | Complete tool — all branch predictors, full cache configurability, performance analysis charts, project report |
 
 ---
 
-## 📁 Project Structure
+## 🛠️ Planned Tech Stack
+
+| Component | Technology | Reason |
+|-----------|-----------|--------|
+| Hardware Design | SystemVerilog (IEEE 1800-2017) | Industry standard for RTL; synthesizable to FPGA |
+| RTL Simulation | Verilator 5.x | Fast open-source RTL simulator; compiles SV to C++ |
+| Waveform Viewer | GTKWave | Standard tool for viewing `.vcd` signal traces |
+| Behavioral Simulator | C++17 | Performance; can model cache/predictor without RTL complexity |
+| HTTP Server | cpp-httplib (header-only) | Embedded in the `.exe`; zero install |
+| JSON | nlohmann/json (header-only) | API responses between simulator and browser |
+| Web UI | Vanilla HTML/CSS/JS | No framework dependencies; works in any browser |
+| Build System | CMake 3.20+ | Cross-platform; integrates Python embedding step |
+| Standalone Packaging | MSVC Static Runtime (/MT) | Zero DLL dependencies on end-user machine |
+
+---
+
+## 📁 Planned Repository Structure
 
 ```
-coa-prj/
+rvsim/
 │
-├── 📄 CMakeLists.txt              Root build config (vcpkg + static linking)
-├── 📄 vcpkg.json                  Dependencies: cpp-httplib, nlohmann-json
-├── 📄 main.cpp                    Entry point: start server + open browser
-├── 📄 setup.ps1                   One-shot Windows build script
+├── 📄 README.md                    This document
+├── 📄 CMakeLists.txt               Root build config
+├── 📄 vcpkg.json                   C++ dependency manifest
+├── 📄 setup.ps1                    One-click Windows build script
 │
-├── 📂 simulator/                  C++ simulator core (compiled as static library)
-│   ├── include/
-│   │   ├── isa/
-│   │   │   ├── rv32i_types.h      Instruction formats, opcodes, pipeline regs
-│   │   │   └── decoder.h          RV32I instruction decoder interface
-│   │   ├── core/
-│   │   │   ├── pipeline.h         5-stage pipeline + visualization state
-│   │   │   ├── hazard_unit.h      RAW hazard detection logic
-│   │   │   ├── forwarding_unit.h  EX/MEM→EX data bypassing
-│   │   │   ├── register_file.h    32 × 32-bit registers (x0 hardwired to 0)
-│   │   │   └── memory.h           Flat 16MB byte-addressable memory
-│   │   ├── branch/
-│   │   │   ├── predictor.h        Abstract base class
-│   │   │   ├── static_pred.h      Always-taken / always-not-taken
-│   │   │   ├── two_bit_pred.h     2-bit saturating counter + PHT
-│   │   │   ├── gshare_pred.h      GShare (PC XOR GHR indexing)
-│   │   │   └── tournament_pred.h  Local + global + chooser
-│   │   ├── cache/
-│   │   │   └── cache.h            Configurable cache (assoc, size, policy)
-│   │   └── stats/
-│   │       └── perf_counters.h    IPC, miss rate, misprediction rate
-│   └── src/                       Implementations (.cpp files)
+├── 📂 rtl/                         SystemVerilog Hardware Design
+│   ├── src/
+│   │   ├── pkg/rv32i_pkg.sv        ISA types, structs, constants
+│   │   ├── core/rv32i_top.sv       Top-level processor + pipeline registers
+│   │   ├── core/control_unit.sv    Instruction → control signals decode
+│   │   ├── datapath/alu.sv         32-bit ALU
+│   │   ├── datapath/branch_comp.sv Branch condition evaluator
+│   │   ├── datapath/imm_gen.sv     Immediate sign-extension (all 6 formats)
+│   │   ├── datapath/register_file.sv 32×32 register file
+│   │   ├── hazard/hazard_unit.sv   Stall + flush signal generation
+│   │   ├── hazard/forwarding_unit.sv Data bypass path selection
+│   │   └── memory/imem.sv + dmem.sv  Instruction + data memories
+│   ├── tb/sim_main.cpp             Verilator C++ testbench
+│   ├── sw/tests/                   RISC-V assembly test programs
+│   └── Makefile                    RTL build + simulation targets
 │
-├── 📂 server/                     HTTP API server
-│   ├── include/api_server.h       REST endpoint definitions
-│   └── src/api_server.cpp         Route handlers + built-in programs
+├── 📂 simulator/                   C++ Behavioral Simulator
+│   ├── include/isa/                ISA types + decoder interface
+│   ├── include/core/               Pipeline, hazard, forwarding, memory
+│   ├── include/branch/             Branch predictor interfaces
+│   ├── include/cache/              Cache model interface
+│   └── src/                        Implementations
+│
+├── 📂 server/                      Embedded HTTP API Server
+│   ├── include/api_server.h
+│   └── src/api_server.cpp          Route handlers
 │
 ├── 📂 frontend/
-│   └── index.html                 Complete single-file web app (self-contained)
-│                                  Dark glassmorphism UI, in-browser assembler,
-│                                  pipeline/cache/predictor visualizations
+│   └── index.html                  Complete single-file web application
+│
+├── 📂 third_party/                 Bundled dependencies (no install needed)
+│   ├── httplib/httplib.h
+│   └── nlohmann/json.hpp
 │
 └── 📂 tools/
-    └── embed_frontend.py          Converts index.html → C++ const char* header
-                                   Run automatically during CMake build
+    └── embed_frontend.py           Bakes HTML into C++ string at build time
 ```
 
 ---
 
-## ⌨️ Built-in Programs
+## 🔬 RISC-V ISA — Instruction Formats
 
-| Program | What it does | Why it's interesting |
-|---------|-------------|---------------------|
-| **Fibonacci(10)** | Iteratively computes F(10)=55 | Loop back-branches stress-test predictors |
-| **Bubble Sort** | Sorts 8 integers | Nested loops, data-dependent branches |
-| **Matrix Multiply** | 2×2 integer matrix A×B=C | Dense memory access, cache sensitivity |
-| **1..10 Sum** | Σ(1..10) = 55 | Simple loop, good for learning pipeline basics |
-| **Memory Loop** | Repeated store/load | Highlights load-use stalls and cache cold-start |
+The RV32I base ISA uses 6 fixed-width 32-bit instruction formats:
 
-Plus the **in-browser assembler** — write your own programs directly in the UI.
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `Space` or `→` | Step 1 cycle |
-| `R` | Reset simulator |
-
----
-
-## 🎓 Concepts Covered
-
-This simulator is designed to make every major computer architecture topic tangible:
-
-| Topic | Where to see it |
-|-------|----------------|
-| **Instruction Encoding** | Look at the hex dump of any loaded program; each line is one instruction |
-| **Pipeline Stages** | The 5-stage diagram — watch instructions flow left to right |
-| **Data Hazards (RAW)** | Load a program with `LW` followed by immediate use; observe the stall bubble |
-| **Forwarding / Bypassing** | Toggle "Data Forwarding" OFF and watch stall cycles skyrocket |
-| **Control Hazards** | Use any branch program; switch to Static Not-Taken and watch flush cycles |
-| **2-Bit Predictor FSM** | Run Fibonacci — watch the PHT converge to ST (Strongly Taken) for the loop |
-| **Branch Correlation** | Compare GShare vs 2-Bit on programs with correlated branches |
-| **Cache Cold Start** | Reset and run — first N accesses are always misses (compulsory misses) |
-| **Conflict Misses** | Switch from 4-way to Direct-Mapped on the matrix multiply; miss rate rises |
-| **IPC vs Ideal** | Compare IPC with/without forwarding, with/without good branch prediction |
-
----
-
-## 🛠️ Building from Source — Detailed
-
-### Prerequisites
-
-| Tool | Where to get it | Notes |
-|------|----------------|-------|
-| Visual Studio 2022 | [visualstudio.microsoft.com](https://visualstudio.microsoft.com/) | Select "Desktop dev with C++" workload |
-| CMake 4.3+ | Included with VS | Or from [cmake.org](https://cmake.org/) |
-| Python 3 | [python.org](https://python.org) | For frontend embedding script |
-| Git | [git-scm.com](https://git-scm.com) | For cloning vcpkg |
-
-### Step-by-Step (Manual)
-
-```powershell
-# 1. Clone and bootstrap vcpkg (one-time)
-git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-
-# 2. Configure (downloads & builds cpp-httplib and nlohmann-json)
-cmake -B build -S . `
-    -DCMAKE_TOOLCHAIN_FILE="C:\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-    -DVCPKG_TARGET_TRIPLET=x64-windows-static `
-    -DCMAKE_BUILD_TYPE=Release
-
-# 3. Build
-cmake --build build --config Release
-
-# 4. Run
-.\bin\Release\RVSim.exe
+```
+ 31        25 24    20 19    15 14  12 11        7 6       0
+┌────────────┬────────┬────────┬──────┬───────────┬────────┐
+│   funct7   │  rs2   │  rs1   │funct3│    rd     │ opcode │  R-type (register ops)
+├────────────┴────────┼────────┼──────┼───────────┼────────┤
+│        imm[11:0]    │  rs1   │funct3│    rd     │ opcode │  I-type (loads, ADDI)
+├─────────────────────┴────────┼──────┼───────────┼────────┤
+│    imm[11:5]  │     rs2│ rs1 │funct3│ imm[4:0]  │ opcode │  S-type (stores)
+├───────────────┴────────┴─────┼──────┼───────────┼────────┤
+│         imm[12|10:5]         │funct3│ imm[4:1|11]│opcode │  B-type (branches)
+├──────────────────────────────┴──────┴───────────┼────────┤
+│                  imm[31:12]                      │ opcode │  U-type (LUI, AUIPC)
+├──────────────────────────────────────────────────┼────────┤
+│            imm[20|10:1|11|19:12]                 │ opcode │  J-type (JAL)
+└──────────────────────────────────────────────────┴────────┘
 ```
 
-### What `setup.ps1` does
-
-The included `setup.ps1` automates all of the above. It:
-1. Clones vcpkg to `C:\vcpkg` if not present
-2. Runs `bootstrap-vcpkg.bat`
-3. Finds the VS-bundled CMake automatically
-4. Runs CMake configure (vcpkg downloads + compiles dependencies)
-5. Runs the build
-6. Offers to launch the exe
+The immediate generator handles all 6 formats, sign-extending the immediate to 32 bits and reassembling the non-contiguous bits (especially in B-type and J-type).
 
 ---
 
-## 🔒 Why Standalone?
+## 📊 Expected Performance Results
 
-Most simulators require a Python environment, Node.js, or a specific runtime. RVSim packages everything into a single Windows executable using:
+After implementation, we plan to generate the following experimental data for the report:
 
-- **cpp-httplib** — header-only HTTP server compiled directly into the binary
-- **Embedded frontend** — `embed_frontend.py` converts `index.html` into a C++ raw string literal at build time
-- **Static MSVC runtime** — `/MT` flag links `VCRUNTIME140.dll` and `MSVCRT.dll` statically, so no redistributable is needed
-- **nlohmann/json** — header-only, no `.dll` needed
-
-Result: the `.exe` is the entire application. It can be emailed, put on a USB drive, or shared on a course page — and it will just run.
-
----
-
-## 📊 Performance Notes
-
-The simulator is deliberately **not optimized for speed** — it's optimized for **clarity and correctness**. Every pipeline register is a full C++ struct with named fields. Every stage is a separate function. This makes the code match the textbook diagrams.
-
-For reference, on a modern laptop:
-- Simple programs (~50 instructions): finishes in **< 1ms**
-- Loop-heavy programs (~10,000 instructions): finishes in **< 50ms**
-- The web UI refreshes instantly after each step
+| Experiment | Variable | Expected Observation |
+|-----------|----------|---------------------|
+| Forwarding ON vs OFF | IPC | ~30–50% IPC improvement with forwarding on typical programs |
+| Branch predictor comparison | Misprediction rate | Static: ~40–60%, 2-bit: ~5–15% on loops, GShare: ~3–10% |
+| Cache size sweep (1KB→32KB) | Miss rate | Steep drop from 1KB→8KB; flat after 16KB for test programs |
+| Direct-mapped vs 4-way | Miss rate | 4-way reduces conflict misses; gap is largest on matrix multiply |
+| Load-use frequency | Stall cycles | Load-heavy programs: up to 20% stall cycles without forwarding |
 
 ---
 
-## 🤝 Acknowledgements
+## 📖 References
 
-- **RISC-V Foundation** — for the open ISA specification
-- **cpp-httplib** by yhirose — the header-only HTTP server that makes standalone distribution possible
-- **nlohmann/json** — the single-header JSON library
-- **Patterson & Hennessy** — *Computer Organization and Design RISC-V Edition* — the textbook this simulator is based on
+- Patterson & Hennessy — *Computer Organization and Design: RISC-V Edition* (the pipeline design follows this textbook directly)
+- RISC-V Foundation — *The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA*
+- Verilator documentation — *Fast Simulation of SystemVerilog Designs*
+- Hennessy & Patterson — *Computer Architecture: A Quantitative Approach* (branch prediction and cache sections)
 
 ---
 
 <div align="center">
 
-**Built as a Computer Architecture course project**
-
-*Made with ❤️ and a lot of pipeline diagrams*
+*Computer Architecture Project — Review 1 Presentation*
+*August 28, 2026*
 
 </div>
