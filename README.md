@@ -14,8 +14,7 @@
 
 [![Status](https://img.shields.io/badge/status-Planning%20Phase-blue?style=flat-square)]()
 [![ISA](https://img.shields.io/badge/ISA-RV32I-orange?style=flat-square)](https://riscv.org/)
-[![RTL](https://img.shields.io/badge/RTL-SystemVerilog-blueviolet?style=flat-square)]()
-[![Sim](https://img.shields.io/badge/Sim-Verilator-green?style=flat-square)]()
+[![Sim](https://img.shields.io/badge/Sim-C++17-green?style=flat-square)]()
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)](LICENSE)
 
 </div>
@@ -49,71 +48,46 @@ When complete, a professor or student will:
    - Cache sets being filled, hits and misses counted
 5. **Change configurations** mid-run: swap the branch predictor, change cache associativity, toggle data forwarding — and immediately see the IPC and miss rate change
 
-No Python. No Node.js. No Verilator. No toolchain. One file.
+No Python. No Node.js. No toolchain. One file.
 
 ---
 
 ## 🏗️ Planned Architecture
 
-The project has two major technical layers that both model the same processor:
+The project is built on a high-performance C++ backend serving an interactive HTML/JS frontend:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           RVSim — System Overview                       │
 │                                                                         │
-│   ┌──────────────────────────┐      ┌──────────────────────────────┐   │
-│   │   SystemVerilog RTL      │      │   C++ Behavioral Simulator   │   │
-│   │   (Actual Hardware)      │      │   (Drives the Web UI)        │   │
-│   │                          │      │                              │   │
-│   │  rv32i_top.sv            │      │  pipeline.cpp                │   │
-│   │  alu.sv                  │      │  decoder.cpp                 │   │
-│   │  hazard_unit.sv          │ same │  hazard_unit.cpp             │   │
-│   │  forwarding_unit.sv      │design│  forwarding_unit.cpp         │   │
-│   │  register_file.sv        │      │  cache.cpp                   │   │
-│   │  imem.sv / dmem.sv       │      │  branch predictors           │   │
-│   └──────────┬───────────────┘      └──────────────┬───────────────┘   │
-│              │                                      │                   │
-│              ▼                                      ▼                   │
-│      Verilator → C++                      Embedded HTTP Server          │
-│      .vcd waveforms                       REST API (cpp-httplib)        │
-│      (GTKWave)                            Serves embedded frontend      │
-│                                                     │                   │
-│                                                     ▼                   │
-│                                           localhost:8080                │
-│                                           Interactive Web UI            │
+│   ┌──────────────────────────────┐                                      │
+│   │   C++ Behavioral Simulator   │                                      │
+│   │   (Cycle-Accurate Model)     │                                      │
+│   │                              │                                      │
+│   │  pipeline.cpp                │                                      │
+│   │  decoder.cpp                 │                                      │
+│   │  hazard_unit.cpp             │                                      │
+│   │  forwarding_unit.cpp         │                                      │
+│   │  cache.cpp                   │                                      │
+│   │  branch predictors           │                                      │
+│   └──────────────┬───────────────┘                                      │
+│                  │                                                      │
+│                  ▼                                                      │
+│         Embedded HTTP Server                                            │
+│         REST API (cpp-httplib)                                          │
+│         Serves embedded frontend                                        │
+│                  │                                                      │
+│                  ▼                                                      │
+│        localhost:8080 (Web UI)                                          │
+│        Interactive Visualization                                        │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
-
-### Why Two Implementations?
-
-| Layer | Purpose |
-|-------|---------|
-| **SystemVerilog RTL** | Actual synthesizable hardware — can be run on an FPGA, waveforms can be analyzed in GTKWave. Proves the design is architecturally sound. |
-| **C++ Behavioral Simulator** | Fast, flexible, drives the web interface. Can be extended with features (branch predictors, cache) that would require significant hardware to simulate in RTL. |
-
-Both are designed from the same architectural specification. The RTL is the hardware; the C++ is the software model of that hardware.
 
 ---
 
 ## 🔩 Planned Modules
 
-### Layer 1 — SystemVerilog RTL (`rtl/`)
-
-| Module | File | Description |
-|--------|------|-------------|
-| **ISA Package** | `pkg/rv32i_pkg.sv` | All type definitions: opcodes, ALU ops, forwarding selectors, pipeline register structs |
-| **Top-Level Processor** | `core/rv32i_top.sv` | Instantiates and wires all units; contains the 4 pipeline registers |
-| **Control Unit** | `core/control_unit.sv` | Decodes opcode/funct3/funct7 into control signals for every stage |
-| **ALU** | `datapath/alu.sv` | 32-bit combinational ALU: ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND |
-| **Branch Comparator** | `datapath/branch_comp.sv` | Evaluates BEQ, BNE, BLT, BGE, BLTU, BGEU using forwarded register values |
-| **Immediate Generator** | `datapath/imm_gen.sv` | Sign-extends immediates for all 6 RV32I instruction formats (R/I/S/B/U/J) |
-| **Register File** | `datapath/register_file.sv` | 32 × 32-bit registers; x0 hardwired to zero; synchronous write, async read |
-| **Hazard Detection Unit** | `hazard/hazard_unit.sv` | Detects load-use hazards; generates stall_if, stall_id, flush_id, flush_ex |
-| **Forwarding Unit** | `hazard/forwarding_unit.sv` | Detects EX/MEM → EX and MEM/WB → EX data hazards; selects bypass path |
-| **Instruction Memory** | `memory/imem.sv` | Read-only synchronous memory; loads programs from `.hex` files |
-| **Data Memory** | `memory/dmem.sv` | Read/write byte-addressable memory; supports LB/LH/LW/SB/SH/SW |
-
-### Layer 2 — C++ Behavioral Simulator (`simulator/`)
+### Layer 1 — C++ Behavioral Simulator (`simulator/`)
 
 | Module | Description |
 |--------|-------------|
@@ -127,7 +101,7 @@ Both are designed from the same architectural specification. The RTL is the hard
 | **Cache Model** | Configurable L1 I-Cache and D-Cache: any size, associativity, LRU or FIFO |
 | **Performance Counters** | IPC, stall cycles, flush cycles, miss rate, misprediction rate |
 
-### Layer 3 — Web Interface (`frontend/`)
+### Layer 2 — Web Interface (`frontend/`)
 
 | Feature | Description |
 |---------|-------------|
@@ -138,7 +112,7 @@ Both are designed from the same architectural specification. The RTL is the hard
 | **Statistics Panel** | IPC, cycle count, stall cycles, flush cycles, misprediction rate, miss rate |
 | **Assembly Editor** | Type RV32I assembly in the browser; assembles and loads instantly |
 
-### Layer 4 — HTTP Server (`server/`)
+### Layer 3 — HTTP Server (`server/`)
 
 | Component | Description |
 |-----------|-------------|
@@ -193,10 +167,7 @@ Both are designed from the same architectural specification. The RTL is the hard
 
 | Component | Technology | Reason |
 |-----------|-----------|--------|
-| Hardware Design | SystemVerilog (IEEE 1800-2017) | Industry standard for RTL; synthesizable to FPGA |
-| RTL Simulation | Verilator 5.x | Fast open-source RTL simulator; compiles SV to C++ |
-| Waveform Viewer | GTKWave | Standard tool for viewing `.vcd` signal traces |
-| Behavioral Simulator | C++17 | Performance; can model cache/predictor without RTL complexity |
+| Behavioral Simulator | C++17 | Performance; can easily model cache/predictor internals |
 | HTTP Server | cpp-httplib (header-only) | Embedded in the `.exe`; zero install |
 | JSON | nlohmann/json (header-only) | API responses between simulator and browser |
 | Web UI | Vanilla HTML/CSS/JS | No framework dependencies; works in any browser |
@@ -214,22 +185,6 @@ rvsim/
 ├── 📄 CMakeLists.txt               Root build config
 ├── 📄 vcpkg.json                   C++ dependency manifest
 ├── 📄 setup.ps1                    One-click Windows build script
-│
-├── 📂 rtl/                         SystemVerilog Hardware Design
-│   ├── src/
-│   │   ├── pkg/rv32i_pkg.sv        ISA types, structs, constants
-│   │   ├── core/rv32i_top.sv       Top-level processor + pipeline registers
-│   │   ├── core/control_unit.sv    Instruction → control signals decode
-│   │   ├── datapath/alu.sv         32-bit ALU
-│   │   ├── datapath/branch_comp.sv Branch condition evaluator
-│   │   ├── datapath/imm_gen.sv     Immediate sign-extension (all 6 formats)
-│   │   ├── datapath/register_file.sv 32×32 register file
-│   │   ├── hazard/hazard_unit.sv   Stall + flush signal generation
-│   │   ├── hazard/forwarding_unit.sv Data bypass path selection
-│   │   └── memory/imem.sv + dmem.sv  Instruction + data memories
-│   ├── tb/sim_main.cpp             Verilator C++ testbench
-│   ├── sw/tests/                   RISC-V assembly test programs
-│   └── Makefile                    RTL build + simulation targets
 │
 ├── 📂 simulator/                   C++ Behavioral Simulator
 │   ├── include/isa/                ISA types + decoder interface
@@ -298,7 +253,6 @@ After implementation, we plan to generate the following experimental data for th
 
 - Patterson & Hennessy — *Computer Organization and Design: RISC-V Edition* (the pipeline design follows this textbook directly)
 - RISC-V Foundation — *The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA*
-- Verilator documentation — *Fast Simulation of SystemVerilog Designs*
 - Hennessy & Patterson — *Computer Architecture: A Quantitative Approach* (branch prediction and cache sections)
 
 ---
