@@ -2,7 +2,7 @@
 // api_server.h — Embedded HTTP REST API Server
 // =============================================================================
 #pragma once
-#include "rtl_pipeline.h"
+#include "core/pipeline.h"
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <memory>
@@ -26,7 +26,7 @@ private:
     int port_;
     std::atomic<bool> running_{false};
     httplib::Server   svr_;
-    std::unique_ptr<rv32i::RtlPipeline> pipeline_;
+    std::unique_ptr<rv32i::Pipeline> pipeline_;
     rv32i::PipelineConfig config_;
 
     // ---------- route handlers ----------
@@ -35,10 +35,10 @@ private:
     // Serve the embedded frontend HTML
     void handle_root(const httplib::Request&, httplib::Response& res);
 
-    // POST /api/load  { "hex": "..." }
+    // POST /api/load  { "builtin": "fibonacci" } or { "hex": "..." }
     void handle_load(const httplib::Request& req, httplib::Response& res);
 
-    // POST /api/config { "predictor": "gshare", "cache_size": 8192, ... }
+    // POST /api/config { "predictor": "gshare", "forwarding": true, ... }
     void handle_config(const httplib::Request& req, httplib::Response& res);
 
     // POST /api/step  { "cycles": 1 }
