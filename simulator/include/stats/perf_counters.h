@@ -12,6 +12,7 @@ struct PerfCounters {
     uint64_t instructions    = 0; // retired (completed WB)
     uint64_t stall_cycles    = 0; // cycles wasted due to load-use stalls
     uint64_t flush_cycles    = 0; // cycles wasted due to branch flushes (mispredictions)
+    uint64_t dual_issue_cycles = 0; // cycles where 2 instructions were issued
     uint64_t branch_count    = 0;
     uint64_t mispredictions  = 0;
     uint64_t cache_accesses  = 0;

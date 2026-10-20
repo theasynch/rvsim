@@ -3,6 +3,9 @@
 // =============================================================================
 #pragma once
 #include "core/pipeline.h"
+#include "core/superscalar_pipeline.h"
+#include "core/vliw_pipeline.h"
+#include "core/simulator_engine.h"
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <memory>
@@ -26,8 +29,10 @@ private:
     int port_;
     std::atomic<bool> running_{false};
     httplib::Server   svr_;
-    std::unique_ptr<rv32i::Pipeline> pipeline_;
-    rv32i::PipelineConfig config_;
+    std::unique_ptr<rv32i::SimulatorEngine> pipeline_;
+    
+    // Store current loaded hex program so we can reload it when mode changes
+    std::string current_hex_program_;
 
     // ---------- route handlers ----------
     void setup_routes();
@@ -40,6 +45,9 @@ private:
 
     // POST /api/config { "predictor": "gshare", "forwarding": true, ... }
     void handle_config(const httplib::Request& req, httplib::Response& res);
+
+    // POST /api/mode { "mode": "scalar"|"superscalar"|"vliw", "policy": "io_io" }
+    void handle_mode(const httplib::Request& req, httplib::Response& res);
 
     // POST /api/step  { "cycles": 1 }
     void handle_step(const httplib::Request& req, httplib::Response& res);
@@ -57,7 +65,6 @@ private:
     void handle_programs(const httplib::Request& req, httplib::Response& res);
 
     // Helper: serialize PipelineState to JSON response
-    static nlohmann::json state_to_json(const rv32i::PipelineState& s);
     static void json_response(httplib::Response& res, const nlohmann::json& j,
                               int status = 200);
     static void error_response(httplib::Response& res, const std::string& msg,

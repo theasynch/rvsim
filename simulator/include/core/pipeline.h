@@ -23,6 +23,7 @@
 #include "branch/predictor.h"
 #include "cache/cache.h"
 #include "stats/perf_counters.h"
+#include "core/simulator_engine.h"
 #include <memory>
 #include <string>
 #include <nlohmann/json.hpp>
@@ -77,43 +78,30 @@ struct PipelineConfig {
 // ---------------------------------------------------------------------------
 // Pipeline class — the main simulator
 // ---------------------------------------------------------------------------
-class Pipeline {
+class Pipeline : public SimulatorEngine {
 public:
     explicit Pipeline(PipelineConfig cfg = {});
 
     // -----------------------------------------------------------------------
-    // step() — advance the pipeline by exactly ONE clock cycle.
-    // Returns a PipelineState snapshot for the frontend.
+    // SimulatorEngine interface
     // -----------------------------------------------------------------------
-    PipelineState step();
+    nlohmann::json step() override;
+    nlohmann::json run(int max_cycles = 100000) override;
+    bool load_program(const std::string& hex_str) override;
+    void reset() override;
+    nlohmann::json get_state_json() const override;
+    void configure(const nlohmann::json& cfg) override;
+    bool is_halted() const override { return halted_; }
+    uint64_t cycle_count() const override { return cycle_; }
+    std::string engine_type() const override { return "scalar"; }
 
     // -----------------------------------------------------------------------
-    // run() — advance N cycles (or until halted). Returns final state.
+    // Legacy interface (kept for backward compatibility during transition)
     // -----------------------------------------------------------------------
-    PipelineState run(int max_cycles = 100000);
-
-    // -----------------------------------------------------------------------
-    // load_program() — write hex text into memory and reset pipeline state.
-    // -----------------------------------------------------------------------
-    bool load_program(const std::string& hex_str);
-
-    // -----------------------------------------------------------------------
-    // reset() — clear pipeline registers and stats, keep memory
-    // -----------------------------------------------------------------------
-    void reset();
-
-    // -----------------------------------------------------------------------
-    // get_state() — get current snapshot without advancing
-    // -----------------------------------------------------------------------
+    PipelineState step_internal();
+    PipelineState run_internal(int max_cycles = 100000);
     PipelineState get_state() const;
-
-    // -----------------------------------------------------------------------
-    // configure() — hot-swap predictor and cache config
-    // -----------------------------------------------------------------------
     void configure(const PipelineConfig& cfg);
-
-    bool is_halted() const { return halted_; }
-    uint64_t cycle_count() const { return cycle_; }
 
 private:
     // Pipeline registers (current and next values)

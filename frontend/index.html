@@ -56,6 +56,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow-x: hidden;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -288,6 +289,9 @@ select:focus { border-color: var(--orange); }
   flex-direction: column;
   gap: 12px;
 }
+.main > * {
+  flex-shrink: 0;
+}
 .main::-webkit-scrollbar { width: 5px; }
 .main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
@@ -336,11 +340,15 @@ select:focus { border-color: var(--orange); }
   padding: 14px;
 }
 
-/* Instruction flow labels above diagram */
-.flow-label-row {
-  display: flex;
-  margin-bottom: 4px;
-  padding: 0 0 0 0;
+/* SVG datapath */
+.datapath-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  background: var(--bg);
 }
 
 /* Stage track */
@@ -348,12 +356,12 @@ select:focus { border-color: var(--orange); }
   display: flex;
   align-items: stretch;
   gap: 0;
+  width: 100%;
 }
 
 /* Stage block */
-.stage-block {
-  flex: 1;
-  min-width: 110px;
+.stage-tile {
+  min-width: 0;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--r2);
@@ -365,7 +373,7 @@ select:focus { border-color: var(--orange); }
 }
 
 /* Top accent strip */
-.stage-block::after {
+.stage-tile::after {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -373,33 +381,31 @@ select:focus { border-color: var(--orange); }
   border-radius: var(--r2) var(--r2) 0 0;
   opacity: .8;
 }
-.stage-block.IF ::after,  .stage-block.IF-s::after   { background: var(--if);  }
-.stage-block.ID-s::after  { background: var(--id);  }
-.stage-block.EX-s::after  { background: var(--ex);  }
-.stage-block.MEM-s::after { background: var(--mem); }
-.stage-block.WB-s::after  { background: var(--wb);  }
+.stage-tile.IF::after  { background: var(--if);  }
+.stage-tile.ID::after  { background: var(--id);  }
+.stage-tile.EX::after  { background: var(--ex);  }
+.stage-tile.MEM::after { background: var(--mem); }
+.stage-tile.WB::after  { background: var(--wb);  }
 
-/* Use data attribute for color */
-.stage-block[data-stage="IF"]::after  { background: var(--if);  }
-.stage-block[data-stage="ID"]::after  { background: var(--id);  }
-.stage-block[data-stage="EX"]::after  { background: var(--ex);  }
-.stage-block[data-stage="MEM"]::after { background: var(--mem); }
-.stage-block[data-stage="WB"]::after  { background: var(--wb);  }
+.stage-tile.IF  { flex: 0 0 18.23%; }
+.stage-tile.ID  { flex: 0 0 16.14%; }
+.stage-tile.EX  { flex: 0 0 16.14%; }
+.stage-tile.MEM { flex: 0 0 16.14%; }
+.stage-tile.WB  { flex: 0 0 20.83%; }
 
-.stage-block.is-bubble {
+.stage-tile.bubble {
   opacity: .5;
   background: var(--bg2);
   border-color: var(--bm);
 }
-.stage-block.is-stall  { border-color: var(--yellow); }
-.stage-block.is-flush  { border-color: var(--red); }
+.stage-tile.stalled  { border-color: var(--yellow); }
 
 @keyframes stage-tick {
   0%   { background: var(--bg3); }
   25%  { background: var(--bg); }
   100% { background: var(--bg3); }
 }
-.stage-block.tick { animation: stage-tick .3s ease; }
+.stage-tile.tick { animation: stage-tick .3s ease; }
 
 .stage-hdr {
   display: flex; align-items: center; justify-content: space-between;
@@ -411,12 +417,12 @@ select:focus { border-color: var(--orange); }
   font-family: var(--mono);
   font-size: 11px; font-weight: 600;
 }
-.stage-block[data-stage="IF"]  .stage-name { color: var(--if);  }
-.stage-block[data-stage="ID"]  .stage-name { color: var(--id);  }
-.stage-block[data-stage="EX"]  .stage-name { color: var(--ex);  }
-.stage-block[data-stage="MEM"] .stage-name { color: var(--mem); }
-.stage-block[data-stage="WB"]  .stage-name { color: var(--wb);  }
-.stage-block.is-bubble .stage-name         { color: var(--text3); }
+.stage-tile.IF  .stage-name { color: var(--if);  }
+.stage-tile.ID  .stage-name { color: var(--id);  }
+.stage-tile.EX  .stage-name { color: var(--ex);  }
+.stage-tile.MEM .stage-name { color: var(--mem); }
+.stage-tile.WB  .stage-name { color: var(--wb);  }
+.stage-tile.bubble .stage-name { color: var(--text3); }
 
 .stage-fn {
   font-size: 9px;
@@ -467,17 +473,17 @@ select:focus { border-color: var(--orange); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  flex-shrink: 0;
+  flex: 0 0 3.125%;
   gap: 3px;
-  padding: 0 2px;
+  padding: 0;
 }
 
-.pipe-reg-arrow {
-  font-size: 16px;
-  color: var(--border2);
-  line-height: 1;
-  user-select: none;
+.pipe-reg-bar {
+  width: 4px;
+  flex: 1;
+  background: var(--border);
+  border-radius: 2px;
+  min-height: 40px;
 }
 
 .pipe-reg-label {
@@ -486,12 +492,11 @@ select:focus { border-color: var(--orange); }
   color: var(--text3);
   text-align: center;
   white-space: nowrap;
-  cursor: help;
   line-height: 1.3;
 }
 
 /* Badges */
-.badge {
+.stage-badge {
   font-family: var(--mono);
   font-size: 9px; font-weight: 600;
   padding: 1px 5px;
@@ -521,7 +526,6 @@ select:focus { border-color: var(--orange); }
   text-transform: uppercase; letter-spacing: .07em;
   color: var(--text3);
   margin-bottom: 8px;
-  cursor: help;
 }
 
 .fwd-path {
@@ -539,7 +543,6 @@ select:focus { border-color: var(--orange); }
   font-size: 10px; font-weight: 500;
   color: var(--text2);
   width: 76px;
-  cursor: help;
 }
 .fwd-path.active .fwd-src { color: var(--blue); }
 
@@ -916,62 +919,110 @@ select:focus { border-color: var(--orange); }
       Step ×10
     </button>
     <button class="btn btn-primary" id="btnRun" onclick="doRun()"
-      data-tip="Run to completion (ECALL) or up to 1,000,000 cycles.">
-      ▶ Run
+      data-tip="Run continuously until the program executes an ECALL instruction (halt). Shows the final pipeline state.">
+      <span id="runBtnIcon">▶</span> Run
     </button>
-    <button class="btn" id="btnReset" onclick="doReset()"
-      data-tip="Reset the pipeline to cycle 0. The program stays loaded in instruction memory. [R]">
+    <button class="btn btn-ghost" id="btnReset" onclick="doReset()"
+      data-tip="Reset the pipeline: PC goes back to 0x00000000, all pipeline registers clear, stats zero out. The loaded program stays in memory.">
       ↺ Reset
     </button>
   </div>
 </header>
 
 <!-- ============================================================
-     LAYOUT
+     TOAST
+     ============================================================ -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ============================================================
+     BODY LAYOUT
      ============================================================ -->
 <div class="layout">
 
-  <!-- SIDEBAR -->
+  <!-- ========================================================
+       SIDEBAR
+       ======================================================== -->
   <aside class="sidebar">
 
+    <!-- Programs -->
     <div class="sb-section">
       <div class="sb-label">Programs</div>
-      <div class="prog-list" id="progList"></div>
+      <div class="prog-list" id="programList">
+        <!-- Populated by JS -->
+      </div>
     </div>
 
+    <!-- Custom Assembly -->
     <div class="sb-section">
       <div class="sb-label">Custom Assembly</div>
-      <textarea class="asm-editor" id="asmEditor"
-        placeholder="# RISC-V assembly&#10;ADDI x1, x0, 10&#10;ADDI x2, x0, 5&#10;ADD  x3, x1, x2&#10;ECALL"></textarea>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px;justify-content:center"
-        onclick="loadCustomAsm()">▶ Assemble &amp; Load</button>
+      <textarea class="asm-editor" id="asmEditor" rows="6"
+        placeholder="# RISC-V Assembly&#10;ADDI x1, x0, 10&#10;ADDI x2, x0, 20&#10;ADD x3, x1, x2&#10;ECALL"></textarea>
+      <button class="btn btn-primary" style="margin-top:6px;width:100%" onclick="loadCustomAsm()">
+        ▶ Assemble & Load
+      </button>
     </div>
 
+    <!-- Configuration -->
     <div class="sb-section">
       <div class="sb-label">Configuration</div>
 
+      <!-- Architecture Mode -->
       <div class="cfg-row">
-        <div class="cfg-lbl"
-          data-tip="Branch Prediction Strategy: Static predictors always choose one outcome. Dynamic predictors track history — they learn from past branch behavior to predict future ones more accurately.">
-          Branch Predictor
-        </div>
-        <select id="selPredictor" onchange="applyConfig()">
+        <div class="cfg-lbl" data-tip="Processor architecture model. Scalar = 1 instr/cycle. Superscalar = 2 instr/cycle. VLIW = 3 packed instr/cycle.">Architecture Mode</div>
+        <select id="modeSelect" onchange="changeMode()">
+          <option value="scalar" selected>Scalar (5-Stage In-Order)</option>
+          <option value="superscalar">Superscalar (2-Wide)</option>
+          <option value="vliw">VLIW (3-Slot Bundle)</option>
+        </select>
+      </div>
+
+      <!-- Superscalar Policy (hidden by default) -->
+      <div class="cfg-row" id="rowPolicy" style="display:none;">
+        <div class="cfg-lbl" data-tip="Issue and Completion policy for Superscalar mode.">Scheduling Policy</div>
+        <select id="policySelect" onchange="changeMode()">
+          <option value="io_io" selected>In-Order / In-Order</option>
+          <option value="ooo_io">Out-of-Order / In-Order</option>
+          <option value="ooo_ooo">Out-of-Order / Out-of-Order</option>
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div class="cfg-lbl" data-tip="The algorithm used to predict whether a branch will be taken. Better predictors reduce pipeline flushes, which improves IPC.">Branch Predictor</div>
+        <select id="predictorSelect" onchange="applyConfig()">
           <option value="static_not_taken">Static Not-Taken</option>
           <option value="static_taken">Static Taken</option>
-          <option value="two_bit">2-Bit Saturating Counter</option>
-          <option value="gshare">GShare (global history)</option>
-          <option value="tournament">Tournament (hybrid)</option>
+          <option value="two_bit">2-Bit Saturating</option>
+          <option value="gshare">GShare (8-bit)</option>
+          <option value="tournament">Tournament</option>
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div class="cfg-lbl" data-tip="Size of the instruction and data caches. Larger caches have higher hit rates but cost more area/power.">Cache Size</div>
+        <select id="cacheSizeSelect" onchange="applyConfig()">
+          <option value="1024">1 KB</option>
+          <option value="2048">2 KB</option>
+          <option value="4096">4 KB</option>
+          <option value="8192" selected>8 KB</option>
+          <option value="16384">16 KB</option>
+        </select>
+      </div>
+
+      <div class="cfg-row">
+        <div class="cfg-lbl" data-tip="Number of ways per set in the cache. Higher associativity reduces conflict misses but adds hardware complexity.">Associativity</div>
+        <select id="cacheAssocSelect" onchange="applyConfig()">
+          <option value="1">Direct-Mapped</option>
+          <option value="2">2-Way</option>
+          <option value="4" selected>4-Way</option>
+          <option value="8">8-Way</option>
         </select>
       </div>
 
       <div class="cfg-row">
         <div class="trow">
-          <div class="cfg-lbl"
-            data-tip="Data Forwarding: Routes results from later pipeline stages directly back to the EX stage, bypassing the register file. Eliminates most RAW (Read-After-Write) hazards. Disable to observe the IPC impact.">
-            Data Forwarding
-          </div>
+          <div class="cfg-lbl" data-tip="When enabled, the result from EX/MEM or MEM/WB is forwarded directly to the ALU inputs, avoiding data hazard stalls. Disable to see the extra stall cycles that occur without forwarding.">Forwarding</div>
           <label class="tog">
-            <input type="checkbox" id="togFwd" checked onchange="applyConfig()">
+            <input type="checkbox" id="forwardingToggle" checked onchange="applyConfig()">
             <span class="tog-sl"></span>
           </label>
         </div>
@@ -980,840 +1031,1208 @@ select:focus { border-color: var(--orange); }
 
   </aside>
 
-  <!-- MAIN -->
+  <!-- ========================================================
+       MAIN AREA
+       ======================================================== -->
   <main class="main">
 
-    <!-- ====================================================
-         PIPELINE DIAGRAM
-         ==================================================== -->
+    <!-- ======================================================
+         PIPELINE VISUALIZATION
+         ====================================================== -->
     <div class="pipeline-card">
-
       <div class="pipeline-card-header">
-        <span class="card-title"
-          data-tip="The 5-stage in-order pipeline processes one instruction per stage per cycle. When full, 5 instructions execute simultaneously — one in each stage.">
-          5-Stage RISC-V Pipeline
-        </span>
+        <span class="card-title">5-Stage Pipeline</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)" id="pipeStatus">—</span>
         <div class="event-bar" id="eventBar"></div>
       </div>
 
+      <!-- SCALAR PIPELINE (5-STAGE IN-ORDER) -->
+      <div id="pipeScalar">
       <div class="pipeline-diagram">
 
-        <!-- Stage track -->
-        <div class="stage-track" id="stageTrack">
+        <!-- ====================================================
+             SVG DATAPATH DIAGRAM — textbook-style processor view
+             ==================================================== -->
+        <svg class="datapath-svg" viewBox="0 0 960 220" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#8b949e"/>
+            </marker>
+            <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#79c0ff"/>
+            </marker>
+            <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#f85149"/>
+            </marker>
+          </defs>
+
+          <!-- Background stage regions with subtle shading -->
+          <rect x="0"   y="0" width="175" height="220" rx="6" fill="rgba(121,192,255,0.04)" stroke="none"/>
+          <rect x="205" y="0" width="155" height="220" rx="6" fill="rgba(210,168,255,0.04)" stroke="none"/>
+          <rect x="390" y="0" width="155" height="220" rx="6" fill="rgba(255,166,87,0.04)"  stroke="none"/>
+          <rect x="575" y="0" width="155" height="220" rx="6" fill="rgba(126,231,135,0.04)" stroke="none"/>
+          <rect x="760" y="0" width="200" height="220" rx="6" fill="rgba(255,123,114,0.04)" stroke="none"/>
+
+          <!-- Stage labels at top -->
+          <text x="88"  y="18" text-anchor="middle" fill="#79c0ff" font-size="11" font-weight="600" font-family="IBM Plex Mono,monospace">IF</text>
+          <text x="283" y="18" text-anchor="middle" fill="#d2a8ff" font-size="11" font-weight="600" font-family="IBM Plex Mono,monospace">ID</text>
+          <text x="468" y="18" text-anchor="middle" fill="#ffa657" font-size="11" font-weight="600" font-family="IBM Plex Mono,monospace">EX</text>
+          <text x="653" y="18" text-anchor="middle" fill="#7ee787" font-size="11" font-weight="600" font-family="IBM Plex Mono,monospace">MEM</text>
+          <text x="860" y="18" text-anchor="middle" fill="#ff7b72" font-size="11" font-weight="600" font-family="IBM Plex Mono,monospace">WB</text>
+
+          <!-- Pipeline register barriers (vertical bars) -->
+          <rect x="178" y="24" width="24" height="180" rx="3" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+          <text x="190" y="120" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace" transform="rotate(-90 190 120)">IF/ID</text>
+
+          <rect x="363" y="24" width="24" height="180" rx="3" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+          <text x="375" y="120" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace" transform="rotate(-90 375 120)">ID/EX</text>
+
+          <rect x="548" y="24" width="24" height="180" rx="3" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+          <text x="560" y="120" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace" transform="rotate(-90 560 120)">EX/MEM</text>
+
+          <rect x="733" y="24" width="24" height="180" rx="3" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+          <text x="745" y="120" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace" transform="rotate(-90 745 120)">MEM/WB</text>
+
+          <!-- ===== IF Stage components ===== -->
+          <!-- PC -->
+          <rect x="15" y="55" width="40" height="35" rx="3" fill="#1c2128" stroke="#79c0ff" stroke-width="1"/>
+          <text x="35" y="77" text-anchor="middle" fill="#79c0ff" font-size="10" font-weight="500" font-family="IBM Plex Mono,monospace">PC</text>
+          <!-- +4 adder -->
+          <circle cx="90" cy="50" r="12" fill="#1c2128" stroke="#30363d" stroke-width="1"/>
+          <text x="90" y="54" text-anchor="middle" fill="#8b949e" font-size="9" font-family="IBM Plex Mono,monospace">+4</text>
+          <!-- I-Mem -->
+          <rect x="70" y="75" width="80" height="55" rx="4" fill="#1c2128" stroke="#79c0ff" stroke-width="1"/>
+          <text x="110" y="100" text-anchor="middle" fill="#79c0ff" font-size="10" font-weight="500" font-family="IBM Plex Mono,monospace">I-Mem</text>
+          <text x="110" y="118" text-anchor="middle" fill="#484f58" font-size="8" font-family="IBM Plex Mono,monospace">Instr</text>
+          <!-- PC → I-Mem -->
+          <line x1="55" y1="72" x2="70" y2="88" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- PC → +4 -->
+          <line x1="55" y1="65" x2="78" y2="52" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- +4 → back to PC mux (conceptual) -->
+          <path d="M90 38 L90 30 L15 30 L15 55" stroke="#484f58" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+          <!-- I-Mem → IF/ID -->
+          <line x1="150" y1="100" x2="178" y2="100" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+
+          <!-- ===== ID Stage components ===== -->
+          <!-- Control Unit -->
+          <rect x="215" y="40" width="65" height="28" rx="3" fill="#1c2128" stroke="#d2a8ff" stroke-width="1"/>
+          <text x="248" y="58" text-anchor="middle" fill="#d2a8ff" font-size="9" font-weight="500" font-family="IBM Plex Mono,monospace">Control</text>
+          <!-- Register File -->
+          <rect x="210" y="80" width="80" height="55" rx="4" fill="#1c2128" stroke="#d2a8ff" stroke-width="1"/>
+          <text x="250" y="100" text-anchor="middle" fill="#d2a8ff" font-size="10" font-weight="500" font-family="IBM Plex Mono,monospace">Reg</text>
+          <text x="250" y="115" text-anchor="middle" fill="#d2a8ff" font-size="10" font-weight="500" font-family="IBM Plex Mono,monospace">File</text>
+          <text x="250" y="128" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace">x0–x31</text>
+          <!-- Imm Gen -->
+          <rect x="220" y="148" width="55" height="25" rx="3" fill="#1c2128" stroke="#30363d" stroke-width="1"/>
+          <text x="248" y="164" text-anchor="middle" fill="#8b949e" font-size="8" font-family="IBM Plex Mono,monospace">Imm Gen</text>
+          <!-- IF/ID → Control -->
+          <line x1="202" y1="54" x2="215" y2="54" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- IF/ID → Reg File -->
+          <line x1="202" y1="100" x2="210" y2="100" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- Reg File → ID/EX -->
+          <line x1="290" y1="95" x2="363" y2="95" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <line x1="290" y1="115" x2="363" y2="115" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <text x="325" y="91" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace">rs1</text>
+          <text x="325" y="126" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace">rs2</text>
+
+          <!-- ===== EX Stage components ===== -->
+          <!-- Fwd MUX A -->
+          <rect x="395" y="72" width="25" height="22" rx="2" fill="#1c2128" stroke="#30363d" stroke-width="1"/>
+          <text x="408" y="86" text-anchor="middle" fill="#8b949e" font-size="7" font-family="IBM Plex Mono,monospace">mA</text>
+          <!-- Fwd MUX B -->
+          <rect x="395" y="108" width="25" height="22" rx="2" fill="#1c2128" stroke="#30363d" stroke-width="1"/>
+          <text x="408" y="122" text-anchor="middle" fill="#8b949e" font-size="7" font-family="IBM Plex Mono,monospace">mB</text>
+          <!-- ALU -->
+          <polygon points="440,65 500,85 500,125 440,145" fill="#1c2128" stroke="#ffa657" stroke-width="1.5"/>
+          <text x="470" y="110" text-anchor="middle" fill="#ffa657" font-size="12" font-weight="600" font-family="IBM Plex Mono,monospace">ALU</text>
+          <!-- Branch logic -->
+          <rect x="440" y="155" width="55" height="22" rx="3" fill="#1c2128" stroke="#30363d" stroke-width="1"/>
+          <text x="468" y="170" text-anchor="middle" fill="#8b949e" font-size="7" font-family="IBM Plex Mono,monospace">Branch?</text>
+          <!-- Mux → ALU -->
+          <line x1="420" y1="83" x2="440" y2="90" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <line x1="420" y1="119" x2="440" y2="120" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- ALU → EX/MEM -->
+          <line x1="500" y1="105" x2="548" y2="105" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+
+          <!-- ===== MEM Stage components ===== -->
+          <!-- D-Mem -->
+          <rect x="585" y="75" width="80" height="55" rx="4" fill="#1c2128" stroke="#7ee787" stroke-width="1"/>
+          <text x="625" y="100" text-anchor="middle" fill="#7ee787" font-size="10" font-weight="500" font-family="IBM Plex Mono,monospace">D-Mem</text>
+          <text x="625" y="118" text-anchor="middle" fill="#484f58" font-size="8" font-family="IBM Plex Mono,monospace">Data</text>
+          <!-- EX/MEM → D-Mem -->
+          <line x1="572" y1="100" x2="585" y2="100" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- D-Mem → MEM/WB -->
+          <line x1="665" y1="100" x2="733" y2="100" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- ALU result bypass (non-memory path) -->
+          <line x1="572" y1="80" x2="625" y2="60" stroke="#484f58" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="625" y1="60" x2="733" y2="80" stroke="#484f58" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+          <text x="680" y="55" text-anchor="middle" fill="#484f58" font-size="7" font-family="IBM Plex Mono,monospace">bypass</text>
+
+          <!-- ===== WB Stage components ===== -->
+          <!-- WB Mux -->
+          <rect x="770" y="80" width="35" height="35" rx="3" fill="#1c2128" stroke="#ff7b72" stroke-width="1"/>
+          <text x="788" y="102" text-anchor="middle" fill="#ff7b72" font-size="8" font-weight="500" font-family="IBM Plex Mono,monospace">MUX</text>
+          <!-- MEM/WB → WB Mux -->
+          <line x1="757" y1="97" x2="770" y2="97" stroke="#484f58" stroke-width="1" marker-end="url(#arrow)"/>
+          <!-- WB Mux → Register File (write-back path) -->
+          <path d="M805 97 L830 97 L830 200 L250 200 L250 135" stroke="#ff7b72" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arrow-red)" id="svgWbPath"/>
+          <text x="540" y="213" text-anchor="middle" fill="#ff7b72" font-size="8" font-family="IBM Plex Mono,monospace">Write-Back to Register File (rd)</text>
+
+          <!-- ===== Forwarding paths (highlighted when active) ===== -->
+          <!-- EX/MEM → EX fwd (blue dashed, hidden by default) -->
+          <path d="M560 130 L560 185 L408 185 L408 130" stroke="#79c0ff" stroke-width="1.5" fill="none" stroke-dasharray="4,2" opacity="0.15" id="svgFwdExMem"/>
+          <text x="484" y="195" text-anchor="middle" fill="#79c0ff" font-size="7" font-family="IBM Plex Mono,monospace" opacity="0.15" id="svgFwdExMemLabel">EX/MEM → EX fwd</text>
+
+          <!-- MEM/WB → EX fwd -->
+          <path d="M745 135 L745 192 L408 192 L408 130" stroke="#79c0ff" stroke-width="1.5" fill="none" stroke-dasharray="4,2" opacity="0.15" id="svgFwdMemWb"/>
+          <text x="576" y="204" text-anchor="middle" fill="#79c0ff" font-size="7" font-family="IBM Plex Mono,monospace" opacity="0.15" id="svgFwdMemWbLabel">MEM/WB → EX fwd</text>
+
+          <!-- Branch target path (shown on flush) -->
+          <path d="M468 177 L468 210 L35 210 L35 55" stroke="#f85149" stroke-width="1.5" fill="none" stroke-dasharray="4,2" opacity="0" id="svgBranchPath"/>
+          <text x="250" y="208" text-anchor="middle" fill="#f85149" font-size="7" font-family="IBM Plex Mono,monospace" opacity="0" id="svgBranchLabel">Branch Target → PC</text>
+        </svg>
+
+        <!-- Stage info track (instruction + PC per stage) -->
+        <div class="stage-track">
 
           <!-- IF -->
-          <div class="stage-block" id="stIF" data-stage="IF">
+          <div class="stage-tile IF" id="stageIF"
+            data-tip="Instruction Fetch: reads the next 32-bit instruction from memory at the PC address. PC increments by 4 each cycle unless a branch is taken.">
             <div class="stage-hdr">
-              <span class="stage-name"
-                data-tip="Instruction Fetch (IF): Reads the instruction at address PC from the Instruction Cache. On a hit, takes 1 cycle. The PC advances to PC+4 unless a branch or jump overrides it.">
-                IF
-              </span>
+              <span class="stage-name">IF</span>
               <span class="stage-fn">Fetch</span>
             </div>
             <div class="stage-body">
-              <div class="stage-instr" id="ifInstr">---</div>
-              <div class="stage-pc"   id="ifPC"></div>
+              <div class="stage-instr" id="ifInstr">—</div>
+              <div class="stage-pc" id="ifPC"></div>
             </div>
-            <div class="stage-badges" id="ifBadges"></div>
+            <div class="stage-badges"></div>
           </div>
 
           <!-- IF/ID register -->
-          <div class="pipe-reg">
-            <div class="pipe-reg-arrow">→</div>
-            <div class="pipe-reg-label"
-              data-tip="IF/ID Pipeline Register: Latches the fetched instruction and PC between the Fetch and Decode stages. Flushed (overwritten with NOP) when a branch or jump is taken.">
-              IF/ID<br>reg
-            </div>
+          <div class="pipe-reg" data-tip="IF/ID pipeline register: latches the fetched instruction word and the current PC. Updates on every rising clock edge.">
+            <div class="pipe-reg-label">IF<br>/ID</div>
+            <div class="pipe-reg-bar"></div>
           </div>
 
           <!-- ID -->
-          <div class="stage-block" id="stID" data-stage="ID">
+          <div class="stage-tile ID" id="stageID"
+            data-tip="Instruction Decode: the control unit decodes the opcode, funct3, funct7 fields. The register file is read (rs1, rs2) and the immediate is sign-extended.">
             <div class="stage-hdr">
-              <span class="stage-name"
-                data-tip="Instruction Decode (ID): Decodes opcode, funct3, funct7 into control signals. Reads registers rs1 and rs2 from the register file. Sign-extends the immediate field. Evaluates branch conditions.">
-                ID
-              </span>
+              <span class="stage-name">ID</span>
               <span class="stage-fn">Decode</span>
             </div>
             <div class="stage-body">
-              <div class="stage-instr" id="idInstr">---</div>
-              <div class="stage-pc"   id="idPC"></div>
+              <div class="stage-instr" id="idInstr">—</div>
+              <div class="stage-pc" id="idPC"></div>
             </div>
-            <div class="stage-badges" id="idBadges"></div>
+            <div class="stage-badges"></div>
           </div>
 
           <!-- ID/EX register -->
-          <div class="pipe-reg">
-            <div class="pipe-reg-arrow">→</div>
-            <div class="pipe-reg-label"
-              data-tip="ID/EX Pipeline Register: Latches rs1_data, rs2_data, immediate, rd, and all control signals. The Hazard Unit writes a NOP (bubble) here when a load-use hazard is detected.">
-              ID/EX<br>reg
-            </div>
+          <div class="pipe-reg" data-tip="ID/EX pipeline register: latches the decoded control signals, register values (rs1, rs2), immediate, rd destination, and PC.">
+            <div class="pipe-reg-label">ID<br>/EX</div>
+            <div class="pipe-reg-bar"></div>
           </div>
 
           <!-- EX -->
-          <div class="stage-block" id="stEX" data-stage="EX">
+          <div class="stage-tile EX" id="stageEX"
+            data-tip="Execute: the ALU computes the result (add, sub, shift, compare). For branches, the condition is evaluated and the target address computed. Forwarding muxes select ALU inputs here.">
             <div class="stage-hdr">
-              <span class="stage-name"
-                data-tip="Execute (EX): The ALU computes the result or memory address. Forwarding MUXes select operands — they can bypass stale register values with fresh results from EX/MEM or MEM/WB registers.">
-                EX
-              </span>
+              <span class="stage-name">EX</span>
               <span class="stage-fn">Execute</span>
             </div>
             <div class="stage-body">
-              <div class="stage-instr" id="exInstr">---</div>
-              <div class="stage-pc"   id="exPC"></div>
-              <div class="stage-fwd-hint" id="exFwdHint"></div>
+              <div class="stage-instr" id="exInstr">—</div>
+              <div class="stage-pc" id="exPC"></div>
+              <div class="stage-fwd-hint" id="fwdHint"></div>
             </div>
-            <div class="stage-badges" id="exBadges"></div>
+            <div class="stage-badges"></div>
           </div>
 
           <!-- EX/MEM register -->
-          <div class="pipe-reg">
-            <div class="pipe-reg-arrow">→</div>
-            <div class="pipe-reg-label"
-              data-tip="EX/MEM Pipeline Register: Latches the ALU result, store data (rs2), and control signals. Its ALU result is the source for EX/MEM→EX forwarding.">
-              EX/MEM<br>reg
-            </div>
+          <div class="pipe-reg" data-tip="EX/MEM pipeline register: latches the ALU result, the branch decision, write data for stores, and all control signals.">
+            <div class="pipe-reg-label">EX<br>/MEM</div>
+            <div class="pipe-reg-bar"></div>
           </div>
 
           <!-- MEM -->
-          <div class="stage-block" id="stMEM" data-stage="MEM">
+          <div class="stage-tile MEM" id="stageMEM"
+            data-tip="Memory Access: LW/SW instructions access the data memory here. For LW, data is read from the address computed by the ALU. For other instructions, this stage is a pass-through.">
             <div class="stage-hdr">
-              <span class="stage-name"
-                data-tip="Memory Access (MEM): Load instructions (LW/LH/LB/LBU/LHU) read data from the D-Cache. Store instructions (SW/SH/SB) write to it. Non-memory instructions pass through unchanged.">
-                MEM
-              </span>
+              <span class="stage-name">MEM</span>
               <span class="stage-fn">Memory</span>
             </div>
             <div class="stage-body">
-              <div class="stage-instr" id="memInstr">---</div>
-              <div class="stage-pc"   id="memPC"></div>
+              <div class="stage-instr" id="memInstr">—</div>
+              <div class="stage-pc" id="memPC"></div>
             </div>
-            <div class="stage-badges" id="memBadges"></div>
+            <div class="stage-badges"></div>
           </div>
 
           <!-- MEM/WB register -->
-          <div class="pipe-reg">
-            <div class="pipe-reg-arrow">→</div>
-            <div class="pipe-reg-label"
-              data-tip="MEM/WB Pipeline Register: Latches the final write-back data — either the ALU result or memory read data — and control signals. Its data is the source for MEM/WB→EX forwarding.">
-              MEM/WB<br>reg
-            </div>
+          <div class="pipe-reg" data-tip="MEM/WB pipeline register: latches either the ALU result or the loaded data, along with the rd destination register and RegWrite signal.">
+            <div class="pipe-reg-label">MEM<br>/WB</div>
+            <div class="pipe-reg-bar"></div>
           </div>
 
           <!-- WB -->
-          <div class="stage-block" id="stWB" data-stage="WB">
+          <div class="stage-tile WB" id="stageWB"
+            data-tip="Write-Back: the result (ALU output or loaded data) is written back to the register file at rd. The register file is written on the first half of the cycle and read on the second half.">
             <div class="stage-hdr">
-              <span class="stage-name"
-                data-tip="Write-Back (WB): Writes the result into destination register rd of the register file. A WB MUX selects between the ALU result, memory read data (loads), or PC+4 (for JAL/JALR). After WB, the instruction is retired and counted in IPC.">
-                WB
-              </span>
+              <span class="stage-name">WB</span>
               <span class="stage-fn">Write-Back</span>
             </div>
             <div class="stage-body">
-              <div class="stage-instr" id="wbInstr">---</div>
-              <div class="stage-pc"   id="wbPC"></div>
+              <div class="stage-instr" id="wbInstr">—</div>
+              <div class="stage-pc" id="wbPC"></div>
             </div>
-            <div class="stage-badges" id="wbBadges"></div>
+            <div class="stage-badges"></div>
           </div>
 
-        </div><!-- /stage-track -->
-
-        <!-- Forwarding paths -->
-        <div class="fwd-section">
-          <div class="fwd-title"
-            data-tip="Forwarding (bypassing): Avoids RAW (Read-After-Write) hazards by routing fresh results directly from pipeline registers back to the EX stage — without waiting for Write-Back. Forwarding eliminates most stalls except load-use.">
-            Data Forwarding Paths
-          </div>
-          <div id="fwdPaths">
-            <div class="fwd-path" id="fwdExMem">
-              <div class="fwd-src"
-                data-tip="EX/MEM→EX: The previous instruction's ALU result bypasses the register file directly to the ALU input. Fixes back-to-back RAW hazards (0-cycle penalty with forwarding).">
-                EX/MEM → EX
-              </div>
-              <div class="fwd-line-wrap">
-                <div class="fwd-line"></div>
-                <div class="fwd-arrow-cap">→</div>
-              </div>
-              <div class="fwd-desc">Previous instruction result → ALU input</div>
-            </div>
-            <div class="fwd-path" id="fwdMemWb">
-              <div class="fwd-src"
-                data-tip="MEM/WB→EX: A result from 2 cycles ago bypasses the register file to the ALU input. Fixes hazards with 1 instruction between producer and consumer.">
-                MEM/WB → EX
-              </div>
-              <div class="fwd-line-wrap">
-                <div class="fwd-line"></div>
-                <div class="fwd-arrow-cap">→</div>
-              </div>
-              <div class="fwd-desc">2-cycle-old result → ALU input</div>
-            </div>
-          </div>
         </div>
 
-      </div><!-- /pipeline-diagram -->
-    </div><!-- /pipeline-card -->
+        <!-- Forwarding paths -->
+        <div class="fwd-section" id="fwdSection">
+          <div class="fwd-title" data-tip="Data forwarding (bypassing) allows the result of a previous instruction to be sent directly to the ALU inputs without waiting for WB. This avoids pipeline stalls for most data hazards.">Forwarding Paths</div>
+          <div class="fwd-path" id="fwdExMem" data-tip="EX/MEM → EX forwarding: the ALU result from the immediately preceding instruction is available and bypassed to the current EX stage inputs.">
+            <span class="fwd-src">EX/MEM → EX</span>
+            <div class="fwd-line-wrap"><div class="fwd-line"></div><span class="fwd-arrow-cap">▸</span></div>
+            <span class="fwd-desc">ALU result from prev. instr</span>
+          </div>
+          <div class="fwd-path" id="fwdMemWb" data-tip="MEM/WB → EX forwarding: the result from two instructions ago (which may be a loaded value from memory) is bypassed to the current EX stage inputs.">
+            <span class="fwd-src">MEM/WB → EX</span>
+            <div class="fwd-line-wrap"><div class="fwd-line"></div><span class="fwd-arrow-cap">▸</span></div>
+            <span class="fwd-desc">Result from 2-back instr</span>
+          </div>
+        </div>
+      </div>
+      </div> <!-- end pipeScalar -->
 
-    <!-- ====================================================
-         STATS
-         ==================================================== -->
+      <!-- SUPERSCALAR PIPELINE (2-WIDE) -->
+      <div id="pipeSuperscalar" style="display:none; padding:15px; color:var(--text2);">
+        <div class="superscalar-viz">
+          <!-- ROB / Issue / Execution visualizing structure will be injected by JS or added here -->
+          <h3 style="color:var(--text1)">Superscalar Core</h3>
+          <p>Instructions Fetched: <span id="ssFetch">0</span> | Issued: <span id="ssIssue">0</span> | Completed: <span id="ssComp">0</span> | Committed: <span id="ssCommit">0</span></p>
+          
+          <div style="display:flex; gap:20px; margin-top:20px;">
+            
+            <div style="flex:1; border:1px solid var(--border); padding:10px; border-radius:6px; background:var(--bg3);">
+              <h4 style="margin-top:0;color:var(--text3);font-size:12px;text-transform:uppercase;">Instruction Queue (Issue)</h4>
+              <div id="ssIQ" style="font-family:var(--mono); font-size:12px;"></div>
+            </div>
+
+            <div style="flex:1; border:1px solid var(--border); padding:10px; border-radius:6px; background:var(--bg3);">
+              <h4 style="margin-top:0;color:var(--text3);font-size:12px;text-transform:uppercase;">Reservation Stations (Execute)</h4>
+              <div id="ssRS" style="font-family:var(--mono); font-size:12px;"></div>
+            </div>
+            
+            <div style="flex:1.5; border:1px solid var(--border); padding:10px; border-radius:6px; background:var(--bg3);">
+              <h4 style="margin-top:0;color:var(--text3);font-size:12px;text-transform:uppercase;">Reorder Buffer (Commit)</h4>
+              <div id="ssROB" style="font-family:var(--mono); font-size:12px;"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- VLIW PIPELINE (3-SLOT) -->
+      <div id="pipeVliw" style="display:none; padding:15px; color:var(--text2);">
+        <div class="vliw-viz">
+          <h3 style="color:var(--text1)">VLIW Pipeline (ALU | MEM | BRU)</h3>
+          <div style="display:flex; gap:10px; margin-top:20px;" id="vliwStages">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================
+         STATS ROW
+         ====================================================== -->
     <div class="stats-row">
-
-      <div class="stat-card"
-        data-tip="IPC (Instructions Per Cycle): retired_instructions ÷ cycles. Ideal is 1.0 — the pipeline retires one instruction per cycle when full. Stalls and flushes push IPC below 1.0.">
+      <div class="stat-card" id="ipcCard"
+        data-tip="Instructions Per Cycle: ideal is 1.0 (one instruction retired every cycle). Stalls, flushes, and multi-cycle operations reduce IPC below 1.0.">
         <div class="stat-lbl">IPC</div>
         <div class="stat-val" id="statIPC">0.000</div>
         <div class="stat-sub">ideal = 1.000</div>
       </div>
-
-      <div class="stat-card"
-        data-tip="Total clock cycles since the simulation started. Each cycle represents one rising clock edge — all pipeline registers update simultaneously.">
-        <div class="stat-lbl">Total Cycles</div>
+      <div class="stat-card" id="cycCard"
+        data-tip="Total clock cycles elapsed since last reset. This includes stall cycles and cycles where flushed (wasted) instructions were in the pipeline.">
+        <div class="stat-lbl">Cycles</div>
         <div class="stat-val" id="statCycles">0</div>
-        <div class="stat-sub">clock edges</div>
+        <div class="stat-sub">total clock ticks</div>
       </div>
-
-      <div class="stat-card"
-        data-tip="Instructions retired: number of instructions that completed Write-Back. Only these contribute to IPC.">
+      <div class="stat-card" id="instrCard"
+        data-tip="Number of instructions that completed the WB stage (retired). This is the useful work done by the pipeline.">
         <div class="stat-lbl">Retired</div>
         <div class="stat-val" id="statInstrs">0</div>
-        <div class="stat-sub">instructions</div>
+        <div class="stat-sub">completed WB</div>
       </div>
-
-      <div class="stat-card" id="cardStalls"
-        data-tip="Stall cycles from load-use hazards. Occurs when a LOAD is immediately followed by a dependent instruction. The hazard unit stalls IF and ID for 1 cycle and inserts a NOP bubble into EX. Forwarding cannot fix this — the memory data arrives too late.">
-        <div class="stat-lbl">Stall Cycles</div>
+      <div class="stat-card" id="stallCard"
+        data-tip="Cycles lost due to load-use hazards. A LW instruction's result isn't available until end of MEM, so the next instruction must wait 1 cycle if it needs that value.">
+        <div class="stat-lbl">Stalls</div>
         <div class="stat-val" id="statStalls">0</div>
-        <div class="stat-sub">load-use hazards</div>
+        <div class="stat-sub">load-use hazard</div>
       </div>
-
-      <div class="stat-card" id="cardMispred"
-        data-tip="Branch misprediction rate: mispredictions ÷ total_branches. Each misprediction causes a 2-cycle flush penalty (the two instructions fetched after the branch must be discarded).">
-        <div class="stat-lbl">Mispred Rate</div>
+      <div class="stat-card" id="mispredCard"
+        data-tip="How often the branch predictor guessed wrong. Each misprediction causes a 2-cycle penalty (flush the 2 instructions fetched on the wrong path).">
+        <div class="stat-lbl">Mispred</div>
         <div class="stat-val" id="statMispred">0.0%</div>
         <div class="stat-sub" id="statMispredSub">0 / 0 branches</div>
       </div>
-
-      <div class="stat-card" id="cardMiss"
-        data-tip="D-Cache miss rate: misses ÷ total_accesses. In a real processor, a cache miss stalls the pipeline for dozens to hundreds of cycles (main memory latency). Here misses are counted but the simulator doesn't add latency.">
-        <div class="stat-lbl">D-Cache Miss</div>
+      <div class="stat-card" id="missCard"
+        data-tip="Combined I-Cache + D-Cache miss rate. A cache miss means the CPU must fetch data from the next level of the memory hierarchy.">
+        <div class="stat-lbl">Cache Miss</div>
         <div class="stat-val" id="statMiss">0.0%</div>
-        <div class="stat-sub" id="statMissSub">0 / 0 accesses</div>
+        <div class="stat-sub" id="statMissSub">I+D combined</div>
+      </div>
+    </div>
+
+    <!-- ======================================================
+         BOTTOM PANELS
+         ====================================================== -->
+    <div class="bottom-row">
+
+      <!-- Registers + Event Log -->
+      <div class="panel-card">
+        <div class="panel-tabs">
+          <div class="ptab active" onclick="showTab(this,'tabRegs')" data-tip="The 32 general-purpose registers (x0–x31). x0 is hardwired to 0. Registers that changed this cycle are highlighted.">Registers</div>
+          <div class="ptab" onclick="showTab(this,'tabLog')">Event Log</div>
+        </div>
+        <div class="panel-body tab-pane active" id="tabRegs">
+          <div class="reg-grid" id="regGrid"></div>
+        </div>
+        <div class="panel-body tab-pane" id="tabLog">
+          <div class="evt-log" id="instrLog"></div>
+        </div>
+      </div>
+
+      <!-- Cache + Predictor -->
+      <div class="panel-card">
+        <div class="panel-tabs">
+          <div class="ptab active" onclick="showTab(this,'tabIcache')">I-Cache</div>
+          <div class="ptab" onclick="showTab(this,'tabDcache')">D-Cache</div>
+          <div class="ptab" onclick="showTab(this,'tabPred')">Predictor</div>
+        </div>
+        <div class="panel-body tab-pane active" id="tabIcache">
+          <div id="icacheViz"></div>
+        </div>
+        <div class="panel-body tab-pane" id="tabDcache">
+          <div id="dcacheViz"></div>
+        </div>
+        <div class="panel-body tab-pane" id="tabPred">
+          <div id="predictorViz"></div>
+        </div>
       </div>
 
     </div>
-
-    <!-- ====================================================
-         BOTTOM PANELS
-         ==================================================== -->
-    <div class="bottom-row">
-
-      <!-- Left: Registers + Log -->
-      <div class="panel-card">
-        <div class="panel-tabs">
-          <div class="ptab active" onclick="swTab('left','regs',this)">Register File</div>
-          <div class="ptab" onclick="swTab('left','log',this)">Instruction Log</div>
-        </div>
-        <div class="panel-body">
-          <div class="tab-pane active" id="tp-regs">
-            <div class="reg-grid" id="regGrid"></div>
-          </div>
-          <div class="tab-pane" id="tp-log">
-            <div class="evt-log" id="evtLog"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Cache + Predictor -->
-      <div class="panel-card">
-        <div class="panel-tabs">
-          <div class="ptab active" onclick="swTab('right','ic',this)">I-Cache</div>
-          <div class="ptab" onclick="swTab('right','dc',this)">D-Cache</div>
-          <div class="ptab" onclick="swTab('right','pr',this)">Predictor</div>
-        </div>
-        <div class="panel-body">
-          <div class="tab-pane active" id="tp-ic"><div id="panIC"></div></div>
-          <div class="tab-pane"        id="tp-dc"><div id="panDC"></div></div>
-          <div class="tab-pane"        id="tp-pr"><div id="panPR"></div></div>
-        </div>
-      </div>
-
-    </div><!-- /bottom-row -->
 
   </main>
 </div>
 
-<div class="toast-wrap" id="toastWrap"></div>
-
-<!-- ============================================================
-     JAVASCRIPT
-     ============================================================ -->
 <script>
-'use strict';
-// ── State ─────────────────────────────────────────────────────
-let simState  = null;
-let running   = false;
-let activePgm = null;
+// =====================================================================
+// RVSim Frontend — JavaScript
+// =====================================================================
 
-// ── API ───────────────────────────────────────────────────────
+const API = '';
+let state = null;
+let running = false;
+let selectedProgram = null;
+let regPrevValues = new Array(32).fill(0);
+let logEntries = [];
+
+// =====================================================================
+// TAB SYSTEM
+// =====================================================================
+function showTab(btn, panelId) {
+  const card = btn.closest('.panel-card');
+  card.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  card.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+
+// =====================================================================
+// TOAST NOTIFICATIONS
+// =====================================================================
+function toast(msg, type='info', duration=3000) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), duration + 500);
+}
+
+// =====================================================================
+// API CALLS
+// =====================================================================
 async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (body !== undefined) opts.body = JSON.stringify(body);
-  const r = await fetch(path, opts);
-  if (!r.ok) throw new Error(`HTTP ${r.status} on ${path}`);
+  const opts = { method };
+  if (body) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  const r = await fetch(API + path, opts);
   return r.json();
 }
 
-// ── Programs ──────────────────────────────────────────────────
+// =====================================================================
+// LOAD PROGRAMS LIST
+// =====================================================================
 async function loadProgramList() {
-  const d = await api('GET', '/api/programs');
-  const el = document.getElementById('progList');
-  el.innerHTML = '';
-  d.programs.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'prog-item';
-    item.id = `p_${p.id}`;
-    item.innerHTML = `<div class="prog-name">${p.name}</div><div class="prog-desc">${p.description}</div>`;
-    item.onclick = () => loadBuiltin(p.id);
-    el.appendChild(item);
-  });
+  try {
+    const data = await api('GET', '/api/programs');
+    const list = document.getElementById('programList');
+    list.innerHTML = '';
+    data.programs.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'prog-item';
+      el.id = 'prog-' + p.id;
+      el.innerHTML = `
+        <div class="prog-name">${p.name}</div>
+        <div class="prog-desc">${p.description}</div>`;
+      el.onclick = () => loadBuiltin(p.id, el);
+      list.appendChild(el);
+    });
+  } catch(e) {
+    toast('Cannot reach simulator server', 'error');
+  }
 }
 
-async function loadBuiltin(id) {
+async function loadBuiltin(id, el) {
   document.querySelectorAll('.prog-item').forEach(x => x.classList.remove('active'));
-  document.getElementById(`p_${id}`)?.classList.add('active');
-  activePgm = id;
-  try {
-    const d = await api('POST', '/api/load', { builtin: id });
-    if (d.ok) {
-      renderUI(d.state);
-      clearLog();
-      toast(`Loaded: ${id}`, 'success');
-    } else {
-      toast(d.error || 'Load failed', 'error');
+  el.classList.add('active');
+  selectedProgram = id;
+  const data = await api('POST', '/api/load', { builtin: id });
+  if (data.ok) {
+    updateUI(data.state);
+    toast(`Loaded: ${id}`, 'success');
+    logEntries = [];
+    document.getElementById('instrLog').innerHTML = '';
+  } else {
+    toast(data.error, 'error');
+  }
+}
+
+// =====================================================================
+// SIMPLE RISC-V ASSEMBLER (JavaScript)
+// Supports all RV32I base instructions + common pseudo-instructions
+// =====================================================================
+function assemble(asmText) {
+  const lines = asmText.split('\n');
+  const words = [];
+  const labels = {};
+
+  const REGS = {
+    zero:0,ra:1,sp:2,gp:3,tp:4,
+    t0:5,t1:6,t2:7,
+    s0:8,fp:8,s1:9,
+    a0:10,a1:11,a2:12,a3:13,a4:14,a5:15,a6:16,a7:17,
+    s2:18,s3:19,s4:20,s5:21,s6:22,s7:23,s8:24,s9:25,s10:26,s11:27,
+    t3:28,t4:29,t5:30,t6:31
+  };
+  for(let i=0;i<32;i++) REGS['x'+i]=i;
+
+  function reg(s) {
+    s = s.trim().replace(',','');
+    if(REGS[s] !== undefined) return REGS[s];
+    throw new Error('Unknown register: ' + s);
+  }
+
+  function imm(s) {
+    s = s.trim().replace(',','');
+    const n = parseInt(s, s.startsWith('0x')||s.startsWith('0X') ? 16 : 10);
+    if(isNaN(n)) throw new Error('Bad immediate: ' + s);
+    return n;
+  }
+
+  function rtype(rd,rs1,rs2,f3,f7) {
+    return ((f7&127)<<25)|((rs2&31)<<20)|((rs1&31)<<15)|((f3&7)<<12)|((rd&31)<<7)|0x33;
+  }
+  function itype(rd,rs1,immVal,f3,opcode) {
+    return ((immVal&0xFFF)<<20)|((rs1&31)<<15)|((f3&7)<<12)|((rd&31)<<7)|(opcode&0x7F);
+  }
+  function stype(rs1,rs2,immVal,f3) {
+    const i11_5=(immVal>>5)&127, i4_0=immVal&31;
+    return (i11_5<<25)|((rs2&31)<<20)|((rs1&31)<<15)|((f3&7)<<12)|(i4_0<<7)|0x23;
+  }
+  function btype(rs1,rs2,immVal,f3) {
+    const i12=(immVal>>12)&1, i11=(immVal>>11)&1;
+    const i10_5=(immVal>>5)&63, i4_1=(immVal>>1)&15;
+    return (i12<<31)|(i10_5<<25)|((rs2&31)<<20)|((rs1&31)<<15)|((f3&7)<<12)|(i4_1<<8)|(i11<<7)|0x63;
+  }
+  function utype(rd,immVal,opcode) {
+    return (immVal&0xFFFFF000)|((rd&31)<<7)|(opcode&0x7F);
+  }
+  function jtype(rd,immVal) {
+    const i20=(immVal>>20)&1, i19_12=(immVal>>12)&255;
+    const i11=(immVal>>11)&1, i10_1=(immVal>>1)&1023;
+    return (i20<<31)|(i10_1<<21)|(i11<<20)|(i19_12<<12)|((rd&31)<<7)|0x6F;
+  }
+
+  // First pass: collect labels
+  let addr = 0;
+  const cleanLines = [];
+  for(const rawLine of lines) {
+    let line = rawLine.split('#')[0].trim();
+    if(!line) continue;
+    if(line.endsWith(':')) { labels[line.slice(0,-1).trim()] = addr; continue; }
+    if(line.includes(':')) {
+      const [lbl,...rest] = line.split(':');
+      labels[lbl.trim()] = addr;
+      line = rest.join(':').trim();
+      if(!line) continue;
     }
-  } catch(e) { toast(e.message, 'error'); }
-}
+    cleanLines.push({ line, addr });
+    addr += 4;
+  }
 
-// ── Controls ──────────────────────────────────────────────────
-async function doStep(n) {
-  if (simState?.halted) return;
-  try {
-    const d = await api('POST', '/api/step', { cycles: n });
-    if (d.ok) { renderUI(d.state); addLog(d.state); }
-  } catch(e) { toast(e.message, 'error'); }
-}
+  // Second pass: encode
+  for(const { line, addr: pc } of cleanLines) {
+    const tok = line.split(/[\s,()]+/).filter(Boolean);
+    const mn = tok[0].toUpperCase();
+    let word = 0;
 
-async function doRun() {
-  if (running || simState?.halted) return;
-  running = true;
-  const btn = document.getElementById('btnRun');
-  btn.textContent = '⏸ Running...';
-  btn.disabled = true;
-  setStatus('running', 'running...');
-  try {
-    const d = await api('POST', '/api/run', { max_cycles: 1000000 });
-    if (d.ok) renderUI(d.state);
-  } catch(e) { toast(e.message, 'error'); }
-  running = false;
-  btn.textContent = '▶ Run';
-  btn.disabled = false;
-}
-
-async function doReset() {
-  try {
-    const d = await api('POST', '/api/reset');
-    if (d.ok) {
-      renderUI(d.state);
-      clearLog();
-      toast('Pipeline reset to cycle 0', 'info');
+    try {
+      switch(mn) {
+        case 'ADD':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),0,0);   break;
+        case 'SUB':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),0,0x20);break;
+        case 'SLL':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),1,0);   break;
+        case 'SLT':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),2,0);   break;
+        case 'SLTU': word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),3,0);   break;
+        case 'XOR':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),4,0);   break;
+        case 'SRL':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),5,0);   break;
+        case 'SRA':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),5,0x20);break;
+        case 'OR':   word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),6,0);   break;
+        case 'AND':  word=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),7,0);   break;
+        case 'ADDI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),0,0x13);break;
+        case 'SLTI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),2,0x13);break;
+        case 'SLTIU':word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),3,0x13);break;
+        case 'XORI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),4,0x13);break;
+        case 'ORI':  word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),6,0x13);break;
+        case 'ANDI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),7,0x13);break;
+        case 'SLLI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3])&31,1,0x13);break;
+        case 'SRLI': word=itype(reg(tok[1]),reg(tok[2]),imm(tok[3])&31,5,0x13);break;
+        case 'SRAI': word=itype(reg(tok[1]),reg(tok[2])|(0x20<<5),imm(tok[3])&31,5,0x13);break;
+        case 'LW': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),2,3); break;
+        case 'LH': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),1,3); break;
+        case 'LB': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),0,3); break;
+        case 'LHU':word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),5,3); break;
+        case 'LBU':word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),4,3); break;
+        case 'SW': word=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),2); break;
+        case 'SH': word=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),1); break;
+        case 'SB': word=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),0); break;
+        case 'BEQ': case 'BNE': case 'BLT': case 'BGE': case 'BLTU': case 'BGEU': {
+          const f3map={BEQ:0,BNE:1,BLT:4,BGE:5,BLTU:6,BGEU:7};
+          let target = tok[3];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=btype(reg(tok[1]),reg(tok[2]),off,f3map[mn]); break; }
+        case 'JAL': {
+          let target = tok[2];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=jtype(reg(tok[1]),off); break; }
+        case 'JALR': word=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),0,0x67); break;
+        case 'LUI':   word=utype(reg(tok[1]),imm(tok[2])<<12, 0x37); break;
+        case 'AUIPC': word=utype(reg(tok[1]),imm(tok[2])<<12, 0x17); break;
+        case 'ECALL':  word=0x00000073; break;
+        case 'EBREAK': word=0x00100073; break;
+        case 'NOP':  word=0x00000013; break;
+        case 'MV':   word=itype(reg(tok[1]),reg(tok[2]),0,0,0x13); break;
+        case 'LI':   word=itype(reg(tok[1]),0,imm(tok[2]),0,0x13); break;
+        case 'RET':  word=itype(0,1,0,0,0x67); break;
+        case 'J': {
+          let target = tok[1];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=jtype(0,off); break; }
+        case 'NOT':  word=itype(reg(tok[1]),reg(tok[2]),-1,4,0x13); break;
+        case 'NEG':  word=rtype(reg(tok[1]),0,reg(tok[2]),0,0x20); break;
+        case 'BEQZ': {
+          let target=tok[2];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=btype(reg(tok[1]),0,off,0); break; }
+        case 'BNEZ': {
+          let target=tok[2];
+          let off = labels[target] !== undefined ? labels[target] - pc : imm(target);
+          word=btype(reg(tok[1]),0,off,1); break; }
+        default:
+          throw new Error('Unknown instruction: ' + mn);
+      }
+    } catch(e) {
+      throw new Error(`Line "${line}": ${e.message}`);
     }
-  } catch(e) { toast(e.message, 'error'); }
-}
 
-async function applyConfig() {
-  const predictor = document.getElementById('selPredictor').value;
-  const forwarding = document.getElementById('togFwd').checked;
-  try {
-    await api('POST', '/api/config', { predictor, forwarding });
-    toast(`Predictor: ${predictor}  |  Forwarding: ${forwarding}`, 'info');
-  } catch(e) { toast(e.message, 'error'); }
+    words.push((word >>> 0).toString(16).padStart(8,'0').toUpperCase());
+  }
+  return words.join('\n');
 }
 
 async function loadCustomAsm() {
-  const text = document.getElementById('asmEditor').value.trim();
-  if (!text) { toast('Assembly editor is empty', 'error'); return; }
+  const text = document.getElementById('asmEditor').value;
+  if(!text.trim()) { toast('Assembly editor is empty','error'); return; }
   try {
     const hex = assemble(text);
-    const d = await api('POST', '/api/load', { hex });
-    if (d.ok) {
-      renderUI(d.state);
-      activePgm = null;
-      document.querySelectorAll('.prog-item').forEach(x => x.classList.remove('active'));
-      clearLog();
+    const data = await api('POST', '/api/load', { hex });
+    if(data.ok) {
+      updateUI(data.state);
       toast('Assembled & loaded successfully', 'success');
+      document.querySelectorAll('.prog-item').forEach(x => x.classList.remove('active'));
+      logEntries = [];
+      document.getElementById('instrLog').innerHTML = '';
     } else {
-      toast(d.error || 'Load error', 'error');
+      toast(data.error, 'error');
     }
-  } catch(e) { toast('Assembler: ' + e.message, 'error'); }
+  } catch(e) {
+    toast('Assembly error: ' + e.message, 'error');
+  }
 }
 
-// ── UI Rendering ──────────────────────────────────────────────
-function renderUI(s) {
-  simState = s;
-  renderHeader(s);
-  renderPipeline(s);
-  renderStats(s);
-  renderRegisters(s);
-  renderCache(s);
-  renderPredictor(s);
+// =====================================================================
+// CONTROLS
+// =====================================================================
+async function doStep(n=1) {
+  const data = await api('POST', '/api/step', { cycles: n });
+  if(data.ok) {
+    updateUI(data.state);
+    addLog(data.state);
+  }
 }
 
-function setStatus(cls, text) {
-  document.getElementById('sdot').className = `sdot ${cls}`;
-  document.getElementById('stext').textContent = text;
+async function doRun() {
+  if(running) return;
+  running = true;
+  document.getElementById('runBtnIcon').textContent = '⏸';
+  const data = await api('POST', '/api/run', { max_cycles: 1000000 });
+  if(data.ok) updateUI(data.state);
+  running = false;
+  document.getElementById('runBtnIcon').textContent = '▶';
 }
 
-function renderHeader(s) {
+async function doReset() {
+  const data = await api('POST', '/api/reset');
+  if(data.ok) {
+    updateUI(data.state);
+    logEntries = [];
+    document.getElementById('instrLog').innerHTML = '';
+    // Clear forwarding hints
+    document.getElementById('fwdHint').textContent = '';
+    document.getElementById('fwdExMem').classList.remove('active');
+    document.getElementById('fwdMemWb').classList.remove('active');
+    toast('Pipeline reset — ready to step', 'info');
+  }
+}
+
+async function applyConfig() {
+  const predictor = document.getElementById('predictorSelect').value;
+  const forwarding = document.getElementById('forwardingToggle').checked;
+  await api('POST', '/api/config', { predictor, forwarding });
+  toast(`Config: predictor=${predictor}, fwd=${forwarding ? 'on' : 'off'}`, 'info', 2000);
+}
+
+// =====================================================================
+// UI UPDATE
+// =====================================================================
+function updateUI(s) {
+  if(!s) return;
+  state = s;
+  updateHeader(s);
+  if (s.engine === 'superscalar') {
+    updateSuperscalarUI(s);
+  } else if (s.engine === 'vliw') {
+    updateVliwUI(s);
+  } else {
+    updatePipeline(s);
+  }
+  updateStats(s);
+  updateRegisters(s);
+  updateCache(s);
+  updatePredictor(s);
+}
+
+function updateHeader(s) {
   document.getElementById('hCycle').textContent = s.cycle;
-  document.getElementById('hIPC').textContent   = s.stats.ipc.toFixed(3);
-  if (s.halted)         setStatus('halted', 'halted');
-  else if (s.cycle ===0) setStatus('', 'idle');
-  else                   setStatus('active', `cycle ${s.cycle}`);
+  
+  const dot = document.getElementById('sdot');
+  const stxt = document.getElementById('stext');
+  if (s.halted) {
+    dot.className = 'sdot halted';
+    stxt.textContent = 'halted';
+  } else if (s.cycle === 0) {
+    dot.className = 'sdot';
+    stxt.textContent = 'idle';
+  } else {
+    dot.className = 'sdot active';
+    stxt.textContent = 'cycle ' + s.cycle;
+  }
 }
 
-// Stage definitions
-const STAGES = [
-  { block:'stIF',  instr:'ifInstr',  pc:'ifPC',  badges:'ifBadges', fwd: null },
-  { block:'stID',  instr:'idInstr',  pc:'idPC',  badges:'idBadges', fwd: null },
-  { block:'stEX',  instr:'exInstr',  pc:'exPC',  badges:'exBadges', fwd: 'exFwdHint' },
-  { block:'stMEM', instr:'memInstr', pc:'memPC', badges:'memBadges',fwd: null },
-  { block:'stWB',  instr:'wbInstr',  pc:'wbPC',  badges:'wbBadges', fwd: null },
-];
+function updatePipeline(s) {
+  const stageIds = ['IF','ID','EX','MEM','WB'];
+  const instrIds = ['ifInstr','idInstr','exInstr','memInstr','wbInstr'];
+  const pcIds    = ['ifPC','idPC','exPC','memPC','wbPC'];
+  const tileIds  = ['stageIF','stageID','stageEX','stageMEM','stageWB'];
 
-function renderPipeline(s) {
-  let fwdA = '', fwdB = '';
+  // Remove old dynamic badges
+  document.querySelectorAll('.stage-badge').forEach(b => b.remove());
 
-  STAGES.forEach(({ block, instr, pc, badges, fwd }, i) => {
-    const blk    = document.getElementById(block);
-    const instrEl = document.getElementById(instr);
-    const pcEl    = document.getElementById(pc);
-    const badgesEl= document.getElementById(badges);
-    const d       = s.stages[i];
+  for(let i=0; i<5; i++) {
+    const stage = s.stages[i];
+    const tile  = document.getElementById(tileIds[i]);
+    const instrEl = document.getElementById(instrIds[i]);
+    const pcEl    = document.getElementById(pcIds[i]);
 
-    // State classes
-    blk.classList.remove('is-bubble','is-stall','is-flush');
-    if (d.bubble)  blk.classList.add('is-bubble');
-    if (d.stalled) blk.classList.add('is-stall');
+    // Reset tile class
+    tile.className = `stage-tile ${stageIds[i]}`;
+    if(stage.bubble)  tile.classList.add('bubble');
+    if(stage.stalled) tile.classList.add('stalled');
 
-    // Instruction text
-    if (d.bubble) {
-      instrEl.textContent = '⊘ bubble';
-      instrEl.style.color = 'var(--text3)';
-    } else if (d.stalled) {
-      instrEl.textContent = '⏸ stall';
-      instrEl.style.color = 'var(--yellow)';
-    } else {
-      instrEl.textContent = d.asm || '---';
-      instrEl.style.color = '';
+    instrEl.textContent = stage.bubble  ? 'NOP (bubble)' :
+                          stage.stalled ? '⏸ stalled' :
+                          (stage.asm || '—');
+    pcEl.textContent = stage.bubble ? '' : (stage.pc_hex || '');
+
+    // Add educational badges
+    const badgeContainer = tile.querySelector('.stage-badges');
+
+    if(stage.stalled) {
+      const b = document.createElement('div');
+      b.className = 'stage-badge badge-stall';
+      b.textContent = 'STALL';
+      b.title = 'Load-Use Hazard: the instruction in ID needs a register value that is being loaded by the LW in EX. The load result is not available until end of MEM stage, so the pipeline inserts a 1-cycle bubble.';
+      badgeContainer.appendChild(b);
     }
-    pcEl.textContent = d.bubble ? '' : (d.pc_hex || '');
-
-    // Forwarding hint in EX
-    if (fwd) {
-      const fwdEl = document.getElementById(fwd);
-      fwdA = d.forward_a || '';
-      fwdB = d.forward_b || '';
-      const hints = [];
-      if (fwdA && fwdA !== 'NONE') hints.push(`rs1 ← ${fwdA}`);
-      if (fwdB && fwdB !== 'NONE') hints.push(`rs2 ← ${fwdB}`);
-      fwdEl.textContent = hints.length ? '⇑ ' + hints.join('  ') : '';
+    if(stage.is_mem_op) {
+      const b = document.createElement('div');
+      b.className = 'stage-badge ' + (stage.cache_hit ? 'badge-hit' : 'badge-miss');
+      b.textContent = stage.cache_hit ? 'HIT' : 'MISS';
+      b.title = stage.cache_hit
+        ? 'Cache Hit: the requested memory address was found in the data cache. No stall penalty.'
+        : 'Cache Miss: the address was not in the cache. In real hardware this would stall for tens to hundreds of cycles while fetching from main memory.';
+      badgeContainer.appendChild(b);
+    }
+    if(stage.wb_active) {
+      const b = document.createElement('div');
+      b.className = 'stage-badge badge-wb';
+      b.textContent = `x${stage.wb_rd}←${stage.wb_value}`;
+      b.title = `Write-Back: the value ${stage.wb_value} (0x${(stage.wb_value>>>0).toString(16).toUpperCase().padStart(8,'0')}) is being written to register x${stage.wb_rd} (${ABI[stage.wb_rd]}) in the register file.`;
+      badgeContainer.appendChild(b);
     }
 
-    // Badges
-    badgesEl.innerHTML = '';
+    // Forwarding indicators for EX stage
+    if(i===2) {
+      const hint = document.getElementById('fwdHint');
+      const fwdA = stage.forward_a && stage.forward_a !== 'NONE' && stage.forward_a !== '';
+      const fwdB = stage.forward_b && stage.forward_b !== 'NONE' && stage.forward_b !== '';
+      const parts = [];
+      if(fwdA) parts.push(`A←${stage.forward_a}`);
+      if(fwdB) parts.push(`B←${stage.forward_b}`);
 
-    if (d.stalled) {
-      badgesEl.innerHTML += badge('stall', 'STALL',
-        'Load-Use Hazard: A LOAD result is needed immediately. The Hazard Unit stalls IF and ID for 1 cycle and inserts a NOP into EX. Forwarding cannot help — memory data arrives too late.');
-    }
-    if (d.is_mem_op) {
-      if (d.cache_hit) {
-        badgesEl.innerHTML += badge('hit', 'HIT',
-          'Cache Hit: Data was found in the cache. No extra latency — result available in the same cycle.');
+      if(parts.length) {
+        hint.textContent = '↑ fwd: ' + parts.join(', ');
+        const b = document.createElement('div');
+        b.className = 'stage-badge badge-fwd';
+        b.textContent = 'FWD';
+        b.title = 'Data Forwarding Active: the ALU input(s) are being bypassed from a later pipeline stage instead of reading from the register file. This avoids a data hazard stall.';
+        badgeContainer.appendChild(b);
       } else {
-        badgesEl.innerHTML += badge('miss', 'MISS',
-          'Cache Miss: Data not in cache. A real processor would stall here for tens to hundreds of cycles (DRAM latency). This simulator counts the miss but continues without stalling.');
+        hint.textContent = '';
       }
-    }
-    if (fwd && (fwdA && fwdA !== 'NONE' || fwdB && fwdB !== 'NONE')) {
-      badgesEl.innerHTML += badge('fwd', 'FWD',
-        'Data Forwarding: Instead of waiting for Write-Back, the EX stage receives a fresh result directly from a downstream pipeline register. Eliminates stalls caused by RAW hazards.');
-    }
-    if (d.wb_active) {
-      badgesEl.innerHTML += badge('wb', `x${d.wb_rd} ← ${d.wb_value}`,
-        `Write-Back: Register x${d.wb_rd} is being written with the result of this instruction.`);
+
+      // Update forwarding path indicators
+      const exmem = document.getElementById('fwdExMem');
+      const memwb = document.getElementById('fwdMemWb');
+      const hasExMem = (stage.forward_a === 'EX_MEM' || stage.forward_b === 'EX_MEM');
+      const hasMemWb = (stage.forward_a === 'MEM_WB' || stage.forward_b === 'MEM_WB');
+      exmem.classList.toggle('active', hasExMem);
+      memwb.classList.toggle('active', hasMemWb);
+
+      // Animate SVG forwarding paths
+      setSvgOpacity('svgFwdExMem', hasExMem ? 1 : 0.15);
+      setSvgOpacity('svgFwdExMemLabel', hasExMem ? 1 : 0.15);
+      setSvgOpacity('svgFwdMemWb', hasMemWb ? 1 : 0.15);
+      setSvgOpacity('svgFwdMemWbLabel', hasMemWb ? 1 : 0.15);
     }
 
     // Tick animation
-    blk.classList.remove('tick');
-    void blk.offsetWidth;
-    blk.classList.add('tick');
-  });
+    tile.classList.add('tick');
+    setTimeout(() => tile.classList.remove('tick'), 300);
+  }
 
-  // Forwarding path highlights
-  const exMemActive = fwdA === 'EX_MEM' || fwdB === 'EX_MEM';
-  const memWbActive = fwdA === 'MEM_WB' || fwdB === 'MEM_WB';
-  document.getElementById('fwdExMem').classList.toggle('active', exMemActive);
-  document.getElementById('fwdMemWb').classList.toggle('active', memWbActive);
+  // Pipeline status text + event bar
+  const evBar = document.getElementById('eventBar');
+  evBar.innerHTML = '';
 
-  // Event bar
-  const bar = document.getElementById('eventBar');
-  bar.innerHTML = '';
-  if (s.stall) {
-    const e = document.createElement('span');
+  if(s.stall) {
+    const e = document.createElement('div');
     e.className = 'evt stall';
-    e.setAttribute('data-tip',
-      'Load-Use Hazard: A LOAD instruction is followed immediately by a dependent instruction. ' +
-      'The Hazard Detection Unit stalls the IF and ID stages for 1 cycle and inserts a NOP bubble into EX. ' +
-      'This costs exactly 1 cycle and cannot be eliminated with forwarding.');
     e.textContent = '⚠ Load-Use Stall';
-    bar.appendChild(e);
+    e.title = 'A load-use data hazard was detected. The pipeline inserted a 1-cycle bubble because the value being loaded is needed by the next instruction.';
+    evBar.appendChild(e);
   }
-  if (s.flush) {
-    const e = document.createElement('span');
+  if(s.flush) {
+    const e = document.createElement('div');
     e.className = 'evt flush';
-    e.setAttribute('data-tip',
-      'Control Hazard: A branch was resolved as TAKEN (or a jump executed). ' +
-      'The two instructions fetched speculatively after it are on the wrong path and must be discarded. ' +
-      'Both are replaced with NOPs — costing 2 cycles.');
-    e.textContent = '⚡ Branch Flush (−2 cycles)';
-    bar.appendChild(e);
+    e.textContent = '⚡ Branch Flush (2 cyc)';
+    e.title = 'A branch was resolved differently than predicted (or a taken branch was detected). The 2 instructions fetched after the branch are on the wrong path and are flushed (replaced with NOPs).';
+    evBar.appendChild(e);
+  }
+
+  // Animate SVG branch path
+  setSvgOpacity('svgBranchPath', s.flush ? 1 : 0);
+  setSvgOpacity('svgBranchLabel', s.flush ? 1 : 0);
+
+  document.getElementById('pipeStatus').textContent = s.halted ? 'HALTED' :
+    s.stall ? 'STALLED' : s.flush ? 'FLUSHING' : s.cycle > 0 ? 'Cycle ' + s.cycle : '—';
+}
+
+// =====================================================================
+// SUPERSCALAR VISUALIZATION
+// =====================================================================
+function updateSuperscalarUI(s) {
+  document.getElementById('ssFetch').textContent = s.fetched;
+  document.getElementById('ssIssue').textContent = s.issued;
+  document.getElementById('ssComp').textContent  = s.completed;
+  document.getElementById('ssCommit').textContent = s.committed;
+  
+  // Instruction Queue
+  const iq = document.getElementById('ssIQ');
+  iq.innerHTML = '';
+  if (s.instr_queue) {
+    s.instr_queue.forEach((instr, i) => {
+      iq.innerHTML += `<div>[${i}] ${instr.pc} : ${instr.asm}</div>`;
+    });
+  }
+
+  // Reservation Stations
+  const rs = document.getElementById('ssRS');
+  rs.innerHTML = '';
+  if (s.reservation_stations) {
+    s.reservation_stations.forEach(r => {
+      let qj = r.qj >= 0 ? `Q${r.qj}` : r.vj;
+      let qk = r.qk >= 0 ? `Q${r.qk}` : r.vk;
+      let style = r.waiting ? 'color:var(--text3)' : 'color:var(--accent-green)';
+      rs.innerHTML += `<div style="${style}">[RS${r.id}] ${r.fu} ROB${r.rob_id} : ${r.asm} | ${qj}, ${qk}</div>`;
+    });
+  }
+
+  // Reorder Buffer
+  const rob = document.getElementById('ssROB');
+  rob.innerHTML = '';
+  if (s.rob) {
+    s.rob.forEach(r => {
+      let style = r.is_head ? 'border-left: 2px solid var(--accent-blue); padding-left:4px;' : 'padding-left:6px;';
+      let status = r.committed ? 'COMMITTED' : (r.ready ? 'READY' : 'WAIT');
+      let stColor = r.committed ? 'var(--text3)' : (r.ready ? 'var(--accent-green)' : 'var(--text1)');
+      rob.innerHTML += `<div style="${style}">
+        [ROB${r.id}] <span style="color:${stColor}">${status}</span> : ${r.asm} (rd=x${r.rd}, res=${r.result})
+      </div>`;
+    });
   }
 }
 
-function badge(cls, label, tip) {
-  return `<span class="badge badge-${cls}" data-tip="${tip.replace(/"/g,'&quot;')}">${label}</span>`;
+// =====================================================================
+// VLIW VISUALIZATION
+// =====================================================================
+function updateVliwUI(s) {
+  const container = document.getElementById('vliwStages');
+  container.innerHTML = '';
+  if (!s.stages) return;
+  
+  s.stages.forEach(st => {
+    let html = `<div style="flex:1; border:1px solid var(--border); padding:10px; border-radius:6px; background:var(--bg3); ${st.bubble ? 'opacity:0.5' : ''}">
+      <h4 style="margin-top:0;color:var(--text3);text-align:center;">${st.stage}</h4>`;
+    
+    const colors = ['var(--accent-blue)', 'var(--accent-green)', 'var(--accent-orange)'];
+    const names = ['ALU', 'MEM', 'BRU'];
+    
+    if (st.slots) {
+      st.slots.forEach((slot, i) => {
+        let isNop = slot.asm === 'NOP' || slot.asm === '---';
+        let col = isNop ? 'var(--text3)' : colors[i];
+        html += `<div style="font-family:var(--mono); font-size:11px; margin-bottom:4px; padding:4px; border:1px solid var(--border); border-radius:4px; color:${col}">
+          <strong style="color:var(--text3)">${names[i]}</strong> ${slot.asm}
+        </div>`;
+      });
+    }
+    html += `</div>`;
+    container.innerHTML += html;
+  });
 }
 
-function renderStats(s) {
+// =====================================================================
+// STATS
+// =====================================================================
+function updateStats(s) {
+  if(!s.stats) return;
   const st = s.stats;
 
-  animNum('statIPC',    st.ipc.toFixed(3));
-  animNum('statCycles', st.cycles);
-  animNum('statInstrs', st.instructions);
-  animNum('statStalls', st.stall_cycles);
-  animNum('statMispred',(st.mispred_rate * 100).toFixed(1) + '%');
-  animNum('statMiss',   (st.miss_rate * 100).toFixed(1) + '%');
-
+  animStat('statIPC',    st.ipc.toFixed(3));
+  if (st.ipc_max) {
+      document.getElementById('ipcCard').querySelector('.stat-sub').textContent = `ideal = ${st.ipc_max.toFixed(1)}`;
+  } else {
+      document.getElementById('ipcCard').querySelector('.stat-sub').textContent = `ideal = 1.0`;
+  }
+  
+  animStat('statCycles', st.cycles);
+  animStat('statInstrs', st.instructions);
+  animStat('statStalls', st.stall_cycles);
+  animStat('statMispred',(st.mispred_rate*100).toFixed(1) + '%');
   document.getElementById('statMispredSub').textContent =
     `${st.mispredictions} / ${st.branch_count} branches`;
+  animStat('statMiss',   (st.miss_rate*100).toFixed(1) + '%');
   document.getElementById('statMissSub').textContent =
     `${st.cache_misses} / ${st.cache_accesses} accesses`;
 
-  // Color the stat cards
-  const cc = (id, val, warnAt, badAt) => {
-    const el = document.getElementById(id);
-    el.className = 'stat-card' + (val >= badAt ? ' bad' : val >= warnAt ? ' warn' : '');
-  };
-  cc('cardStalls',  st.stall_cycles, 1, 10);
-  cc('cardMispred', st.mispred_rate * 100, 10, 30);
-  cc('cardMiss',    st.miss_rate * 100,    5,  20);
+  // Color-code cards by thresholds
+  setCardClass('ipcCard',     st.ipc >= 0.8 ? 'good' : st.ipc >= 0.5 ? '' : 'warn');
+  setCardClass('stallCard',   st.stall_cycles === 0 ? '' : 'warn');
+  setCardClass('mispredCard', st.mispred_rate <= 0.1 ? '' : st.mispred_rate <= 0.3 ? 'warn' : 'bad');
+  setCardClass('missCard',    st.miss_rate <= 0.1 ? '' : st.miss_rate <= 0.3 ? 'warn' : 'bad');
 
+  // Update header too
   document.getElementById('hCycle').textContent = st.cycles;
   document.getElementById('hIPC').textContent   = st.ipc.toFixed(3);
 }
 
-function animNum(id, val) {
+function animStat(id, val) {
   const el = document.getElementById(id);
-  if (!el || el.textContent === String(val)) return;
-  el.textContent = val;
-  el.style.color = 'var(--orange)';
-  setTimeout(() => el.style.color = '', 300);
-}
-
-// ── Registers ─────────────────────────────────────────────────
-const ABI = ['zero','ra','sp','gp','tp','t0','t1','t2',
-             's0','s1','a0','a1','a2','a3','a4','a5',
-             'a6','a7','s2','s3','s4','s5','s6','s7',
-             's8','s9','s10','s11','t3','t4','t5','t6'];
-
-const ABI_TIP = {
-  0:'Hardwired zero — reads always return 0, writes are ignored.',
-  1:'Return address (ra) — JAL/JALR write PC+4 here.',
-  2:'Stack pointer (sp) — points to the current top of the stack.',
-  3:'Global pointer (gp) — points to global data.',
-  4:'Thread pointer (tp).',
-  10:'Function argument / return value (a0).',
-  11:'Function argument / return value (a1).',
-};
-
-function buildRegGrid() {
-  const g = document.getElementById('regGrid');
-  g.innerHTML = '';
-  for (let i = 0; i < 32; i++) {
-    const c = document.createElement('div');
-    c.className = 'reg-cell';
-    c.id = `rc${i}`;
-    const tip = ABI_TIP[i] || `General-purpose register x${i} (ABI: ${ABI[i]}).`;
-    c.setAttribute('data-tip', `x${i} / ${ABI[i]}: ${tip}`);
-    c.innerHTML = `<div class="rname">x${i}&nbsp;${ABI[i]}</div><div class="rval" id="rv${i}">0x00000000</div>`;
-    g.appendChild(c);
+  if(el.textContent !== String(val)) {
+    el.textContent = val;
+    el.style.color = 'var(--orange)';
+    setTimeout(() => el.style.color = '', 300);
   }
 }
 
-function renderRegisters(s) {
-  if (!s.registers) return;
-  s.registers.forEach((r, i) => {
-    const el = document.getElementById(`rv${i}`);
-    const cell = document.getElementById(`rc${i}`);
-    if (!el) return;
-    const hex = '0x' + ((r.value >>> 0).toString(16).toUpperCase().padStart(8,'0'));
-    if (hex !== el.textContent && i !== 0) {
+function setCardClass(id, cls) {
+  const el = document.getElementById(id);
+  el.classList.remove('good','warn','bad');
+  if(cls) el.classList.add(cls);
+}
+
+// =====================================================================
+// REGISTERS
+// =====================================================================
+const ABI = ['zero','ra','sp','gp','tp','t0','t1','t2',
+              's0','s1','a0','a1','a2','a3','a4','a5',
+              'a6','a7','s2','s3','s4','s5','s6','s7',
+              's8','s9','s10','s11','t3','t4','t5','t6'];
+
+function initRegGrid() {
+  const grid = document.getElementById('regGrid');
+  grid.innerHTML = '';
+  for(let i=0;i<32;i++) {
+    const cell = document.createElement('div');
+    cell.className = 'reg-cell';
+    cell.id = `reg-${i}`;
+    cell.title = `x${i} (${ABI[i]})${i===0?' — hardwired to 0':i===2?' — stack pointer':''}`;
+    cell.innerHTML = `<div class="rname">${ABI[i]}</div><div class="rval" id="rv-${i}">0x00000000</div>`;
+    grid.appendChild(cell);
+  }
+}
+
+function updateRegisters(s) {
+  if(!s.registers) return;
+  s.registers.forEach((r,i) => {
+    const el = document.getElementById(`rv-${i}`);
+    const cell = document.getElementById(`reg-${i}`);
+    if(!el) return;
+    const hexVal = '0x' + ((r.value>>>0).toString(16).toUpperCase().padStart(8,'0'));
+    if(hexVal !== el.textContent && i !== 0) {
       cell.classList.add('changed');
-      setTimeout(() => cell.classList.remove('changed'), 500);
+      setTimeout(() => cell.classList.remove('changed'), 600);
     }
-    el.textContent = hex;
+    el.textContent = hexVal;
+    regPrevValues[i] = r.value;
   });
 }
 
-// ── Cache ─────────────────────────────────────────────────────
-function renderCache(s) {
-  if (!s.cache) return;
-  renderCachePanel('panIC', s.cache.icache);
-  renderCachePanel('panDC', s.cache.dcache);
+// =====================================================================
+// CACHE VISUALIZATION
+// =====================================================================
+function updateCache(s) {
+  if(!s.cache) return;
+  renderCachePanel('icacheViz', s.cache.icache);
+  renderCachePanel('dcacheViz', s.cache.dcache);
 }
 
-function renderCachePanel(id, c) {
-  const el = document.getElementById(id);
-  if (!c || !el) return;
-  const hit = (c.hit_rate * 100).toFixed(1);
+function renderCachePanel(containerId, c) {
+  const el = document.getElementById(containerId);
+  if(!c || !el) return;
+
+  const hitPct = (c.hit_rate * 100).toFixed(1);
+
   el.innerHTML = `
     <div class="cache-hdr">
-      <div class="cache-hdr-name"
-        data-tip="${c.name}: ${(c.size_bytes/1024).toFixed(0)}KB total, ${c.associativity === 1 ? 'Direct-Mapped' : c.associativity + '-Way Set Associative'}, ${c.block_size}B cache lines, ${c.policy} replacement. ${c.associativity > 1 ? 'Higher associativity reduces conflict misses — multiple addresses can coexist in the same set.' : 'Direct-mapped: fastest but suffers conflict misses when two addresses map to the same set.'}">
-        ${c.name} — ${(c.size_bytes/1024).toFixed(0)}KB ${c.associativity === 1 ? 'DM' : c.associativity + '-Way'}
-      </div>
-      <div class="cache-hdr-rate">${hit}% hit</div>
+      <span class="cache-hdr-name">${c.name} — ${(c.size_bytes/1024).toFixed(0)}KB ${c.associativity === 1 ? 'Direct-Mapped' : c.associativity + '-Way'}</span>
+      <span class="cache-hdr-rate">${hitPct}% hit</span>
     </div>
-    <div class="cache-bar"><div class="cache-bar-fill" style="width:${hit}%"></div></div>
+    <div class="cache-bar"><div class="cache-bar-fill" style="width:${hitPct}%"></div></div>
     <div class="cache-nums">
       <div class="cache-num"><div class="v" style="color:var(--green)">${c.hits}</div><div class="l">Hits</div></div>
       <div class="cache-num"><div class="v" style="color:var(--red)">${c.misses}</div><div class="l">Misses</div></div>
       <div class="cache-num"><div class="v">${c.accesses}</div><div class="l">Total</div></div>
     </div>
-    <div class="cache-meta" style="margin-bottom:4px">Set state — ${c.sets?.length || 0} sets × ${c.associativity} ways (green = valid)</div>
+    <div class="sb-label">Set State (first ${c.sets?.length||0} sets)</div>
     <div class="set-grid">
-      ${(c.sets || []).flatMap((set,si) => set.map((ln,wi) =>
-        `<div class="set-cell${ln.valid?' v':''}" title="Set ${si} Way ${wi}: ${ln.valid?'Tag 0x'+ln.tag.toString(16):'empty'}"></div>`
+      ${(c.sets||[]).flatMap((set,si) => set.map((line,wi) =>
+        `<div class="set-cell ${line.valid?'v':''}" title="Set ${si} Way ${wi}: ${line.valid?'Tag 0x'+line.tag.toString(16):'empty'}"></div>`
       )).join('')}
     </div>
-    <div class="cache-meta" style="margin-top:4px">${c.block_size}B blocks · ${c.num_sets} sets · ${c.policy} replacement</div>
+    <div class="cache-meta">${c.block_size}B blocks | ${c.num_sets} sets | ${c.policy}</div>
   `;
 }
 
-// ── Predictor ─────────────────────────────────────────────────
-function renderPredictor(s) {
-  if (!s.predictor) return;
-  const p   = s.predictor;
-  const el  = document.getElementById('panPR');
-  const pct = ((p.mispred_rate || 0) * 100).toFixed(1);
+// =====================================================================
+// PREDICTOR VISUALIZATION
+// =====================================================================
+function updatePredictor(s) {
+  if(!s.predictor) return;
+  const el = document.getElementById('predictorViz');
+  const p = s.predictor;
 
-  let h = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <div style="font-size:12px;font-weight:600">${p.type || 'Unknown'} Predictor</div>
-    <div style="font-family:var(--mono);font-size:11px;color:var(--yellow)">${pct}% mispred</div>
+  let html = `<div class="cache-hdr">
+    <span class="cache-hdr-name">${p.type || 'Static'} Predictor</span>
+    <span style="color:var(--yellow)">${((p.mispred_rate||0)*100).toFixed(1)}% mispred</span>
   </div>`;
 
-  if (p.type === 'static_not_taken' || p.type === 'static_taken') {
-    const isNT = p.type === 'static_not_taken';
-    h += `<div class="pred-static-msg">
-      Always predicts <strong>${isNT ? 'NOT TAKEN' : 'TAKEN'}</strong>.<br><br>
-      ${isNT
-        ? 'Works well for forward (if-else) branches. Fails on loop back-edges — every taken branch causes a 2-cycle flush.'
-        : 'Works well for loops. Fails on forward (if-else) branches that are not taken.'
-      }
-    </div>`;
-  }
-
-  if (p.ghr_binary) {
-    h += `<div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:10px 0 4px"
-      data-tip="Global History Register (GHR): A shift register of the last N branch outcomes. 1 = taken, 0 = not taken. Each new branch shifts the register left and appends its outcome. Used to index the PHT in GShare.">
-      Global History Register (GHR)
-    </div>
+  if(p.ghr_binary) {
+    html += `<div class="sb-label" style="margin-top:8px">Global History Register (GHR)</div>
     <div class="ghr-row">
       ${p.ghr_binary.split('').map(b =>
-        `<div class="ghr-bit ${b==='1'?'t':'nt'}" title="${b==='1'?'Taken':'Not taken'}">${b}</div>`
+        `<div class="ghr-bit ${b==='1'?'t':'nt'}" title="Branch ${b==='1'?'was TAKEN':'was NOT taken'}">${b}</div>`
       ).join('')}
     </div>`;
   }
 
-  if (p.pht_entries) {
-    const sm = {SNT:'snt',WNT:'wnt',WT:'wt',ST:'st'};
-    h += `<div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:10px 0 4px"
-      data-tip="Pattern History Table (PHT): Array of 2-bit saturating counters. ST (Strongly Taken) and WT (Weakly Taken) predict TAKEN. WNT and SNT predict NOT TAKEN. A counter needs two consecutive wrong predictions to flip its prediction.">
-      Pattern History Table (PHT)
-    </div>
+  if(p.pht_entries) {
+    const stateMap = { SNT:'snt', WNT:'wnt', WT:'wt', ST:'st' };
+    const stateDesc = {
+      SNT:'Strongly Not-Taken — very confident branch will NOT be taken',
+      WNT:'Weakly Not-Taken — slightly favoring not-taken but can change with one taken result',
+      WT: 'Weakly Taken — slightly favoring taken but can change with one not-taken result',
+      ST: 'Strongly Taken — very confident branch WILL be taken'
+    };
+    html += `<div class="sb-label" style="margin-top:8px">Pattern History Table (first ${p.pht_entries.length})</div>
     <div class="pht-grid">
       ${p.pht_entries.map(e =>
-        `<div class="pht-c ${sm[e.state]||''}" title="Entry ${e.index}: ${e.state}">${e.state}</div>`
+        `<div class="pht-c ${stateMap[e.state]||''}" title="Index ${e.index}: ${stateDesc[e.state]||e.state}">${e.state}</div>`
       ).join('')}
     </div>`;
   }
 
-  el.innerHTML = h;
+  if(p.type === 'tournament' && p.chooser) {
+    html += `<div class="sb-label" style="margin-top:8px">Chooser (Local vs Global)</div>
+    <div class="pht-grid">
+      ${p.chooser.map(e =>
+        `<div class="pht-c ${e.prefers==='global'?'st':'snt'}" title="Prefers ${e.prefers} predictor">${e.prefers==='global'?'G':'L'}</div>`
+      ).join('')}
+    </div>`;
+  }
+
+  if(p.type === 'static_not_taken') {
+    html += `<div class="pred-static-msg">
+      <strong>Static Not-Taken</strong> — always predicts the branch will NOT be taken. 
+      Every branch that <em>is</em> taken causes a 2-cycle pipeline flush because the 
+      instructions fetched after the branch are from the wrong path.
+    </div>`;
+  }
+  if(p.type === 'static_taken') {
+    html += `<div class="pred-static-msg">
+      <strong>Static Taken</strong> — always predicts the branch WILL be taken. 
+      Good for loops (which are taken most iterations) but bad for forward branches 
+      (which are often not-taken).
+    </div>`;
+  }
+
+  el.innerHTML = html;
 }
 
-// ── Instruction Log ───────────────────────────────────────────
+// =====================================================================
+// INSTRUCTION LOG
+// =====================================================================
 function addLog(s) {
-  const wb = s.stages?.[4];
-  if (!wb?.wb_active) return;
-  const el = document.createElement('div');
-  el.className = 'log-entry';
-  el.innerHTML =
-    `<span class="log-cyc">#${s.cycle}</span>` +
-    `<span class="log-stg">WB</span>` +
-    `<span class="log-ins">${wb.asm || '---'}</span>` +
-    (wb.wb_rd ? `<span class="log-note">x${wb.wb_rd}←${wb.wb_value}</span>` : '');
-  const log = document.getElementById('evtLog');
-  log.insertBefore(el, log.firstChild);
-  if (log.children.length > 60) log.removeChild(log.lastChild);
-}
-
-function clearLog() {
-  document.getElementById('evtLog').innerHTML = '';
-}
-
-// ── Tabs ──────────────────────────────────────────────────────
-const TAB_GROUPS = {
-  left:  ['regs','log'],
-  right: ['ic','dc','pr'],
-};
-
-function swTab(group, name, el) {
-  TAB_GROUPS[group].forEach(n => document.getElementById(`tp-${n}`)?.classList.remove('active'));
-  document.getElementById(`tp-${name}`)?.classList.add('active');
-  el.closest('.panel-tabs').querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-}
-
-// ── Toast ─────────────────────────────────────────────────────
-function toast(msg, type = 'info', ms = 3000) {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  document.getElementById('toastWrap').appendChild(el);
-  setTimeout(() => el.remove(), ms + 300);
-}
-
-// ── Assembler ─────────────────────────────────────────────────
-function assemble(src) {
-  const ABIREG = {zero:0,ra:1,sp:2,gp:3,tp:4,t0:5,t1:6,t2:7,
-    s0:8,fp:8,s1:9,a0:10,a1:11,a2:12,a3:13,a4:14,a5:15,
-    a6:16,a7:17,s2:18,s3:19,s4:20,s5:21,s6:22,s7:23,
-    s8:24,s9:25,s10:26,s11:27,t3:28,t4:29,t5:30,t6:31};
-  const reg = s => { s=s.trim().replace(/,/g,''); if(s.startsWith('x'))return parseInt(s.slice(1)); if(ABIREG[s]!=null)return ABIREG[s]; throw new Error(`Unknown register: ${s}`); };
-  const imm = s => { s=s.trim().replace(/,/g,''); const n=s.startsWith('0x')?parseInt(s,16):parseInt(s,10); if(isNaN(n))throw new Error(`Bad immediate: ${s}`); return n; };
-  const rtype=(rd,rs1,rs2,f3,f7)=>((f7<<25)|(rs2<<20)|(rs1<<15)|(f3<<12)|(rd<<7)|0x33)>>>0;
-  const itype=(rd,rs1,i,f3,op)  =>(((i&0xFFF)<<20)|(rs1<<15)|(f3<<12)|(rd<<7)|op)>>>0;
-  const stype=(rs1,rs2,i,f3)    =>((((i>>5)&0x7F)<<25)|(rs2<<20)|(rs1<<15)|(f3<<12)|((i&0x1F)<<7)|0x23)>>>0;
-  const btype=(rs1,rs2,o,f3)    =>{const[b12,b11,b10_5,b4_1]=[(o>>12)&1,(o>>11)&1,(o>>5)&0x3F,(o>>1)&0xF];return((b12<<31)|(b10_5<<25)|(rs2<<20)|(rs1<<15)|(f3<<12)|(b4_1<<8)|(b11<<7)|0x63)>>>0;};
-  const utype=(rd,i20,op)       =>((i20&0xFFFFF000)|(rd<<7)|op)>>>0;
-  const jtype=(rd,o)            =>{const[b20,b19_12,b11,b10_1]=[(o>>20)&1,(o>>12)&0xFF,(o>>11)&1,(o>>1)&0x3FF];return((b20<<31)|(b19_12<<12)|(b11<<20)|(b10_1<<21)|(rd<<7)|0x6F)>>>0;};
-
-  const lines=src.split('\n'); const labels={}; let pc=0; const cleaned=[];
-  for(let line of lines){
-    line=line.replace(/#.*/,'').trim(); if(!line)continue;
-    if(/^[A-Za-z_]\w*:$/.test(line)){labels[line.slice(0,-1)]=pc;continue;}
-    if(/^[A-Za-z_]\w*:/.test(line)){
-      const ci=line.indexOf(':');labels[line.slice(0,ci)]=pc;
-      const rest=line.slice(ci+1).trim(); if(rest){cleaned.push([pc,rest]);pc+=4;}
-    } else{cleaned.push([pc,line]);pc+=4;}
+  if(!s.stages) return;
+  const wbStage = s.stages[4];
+  if(wbStage && wbStage.wb_active) {
+    const entry = {
+      cycle: s.cycle,
+      asm: wbStage.asm || '—',
+      wb_rd: wbStage.wb_rd,
+      wb_val: wbStage.wb_value
+    };
+    logEntries.unshift(entry);
+    if(logEntries.length > 50) logEntries.pop();
+    const log = document.getElementById('instrLog');
+    const el = document.createElement('div');
+    el.className = 'log-entry';
+    el.innerHTML = `
+      <span class="log-cyc">#${entry.cycle}</span>
+      <span class="log-stg">WB</span>
+      <span class="log-ins">${entry.asm}</span>
+      ${entry.wb_rd ? `<span class="log-note">x${entry.wb_rd}←${entry.wb_val}</span>` : ''}`;
+    log.insertBefore(el, log.firstChild);
+    if(log.children.length > 50) log.removeChild(log.lastChild);
   }
-  const words=[];
-  for(const[ipc,line]of cleaned){
-    const tok=line.match(/[^\s,()]+/g)||[]; const mn=tok[0].toUpperCase(); let w=0; pc=ipc;
-    try{
-      switch(mn){
-        case'ADD': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),0,0);    break;
-        case'SUB': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),0,0x20); break;
-        case'SLL': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),1,0);    break;
-        case'SLT': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),2,0);    break;
-        case'SLTU':w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),3,0);    break;
-        case'XOR': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),4,0);    break;
-        case'SRL': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),5,0);    break;
-        case'SRA': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),5,0x20); break;
-        case'OR':  w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),6,0);    break;
-        case'AND': w=rtype(reg(tok[1]),reg(tok[2]),reg(tok[3]),7,0);    break;
-        case'ADDI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),0,0x13); break;
-        case'SLTI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),2,0x13); break;
-        case'SLTIU':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),3,0x13);break;
-        case'XORI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),4,0x13); break;
-        case'ORI': w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),6,0x13); break;
-        case'ANDI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),7,0x13); break;
-        case'SLLI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),1,0x13); break;
-        case'SRLI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3]),5,0x13); break;
-        case'SRAI':w=itype(reg(tok[1]),reg(tok[2]),imm(tok[3])|0x400,5,0x13);break;
-        case'LW':  w=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),2,3);    break;
-        case'LH':  w=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),1,3);    break;
-        case'LB':  w=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),0,3);    break;
-        case'LHU': w=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),5,3);    break;
-        case'LBU': w=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),4,3);    break;
-        case'SW':  w=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),2);      break;
-        case'SH':  w=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),1);      break;
-        case'SB':  w=stype(reg(tok[3]),reg(tok[1]),imm(tok[2]),0);      break;
-        case'BEQ':case'BNE':case'BLT':case'BGE':case'BLTU':case'BGEU':{
-          const fm={BEQ:0,BNE:1,BLT:4,BGE:5,BLTU:6,BGEU:7};
-          const t=tok[3];const off=labels[t]!=null?labels[t]-pc:imm(t);
-          w=btype(reg(tok[1]),reg(tok[2]),off,fm[mn]);break;}
-        case'JAL':{const t=tok[2];const off=labels[t]!=null?labels[t]-pc:imm(t);w=jtype(reg(tok[1]),off);break;}
-        case'JALR':w=itype(reg(tok[1]),reg(tok[3]),imm(tok[2]),0,0x67); break;
-        case'LUI': w=utype(reg(tok[1]),imm(tok[2])<<12,0x37);           break;
-        case'AUIPC':w=utype(reg(tok[1]),imm(tok[2])<<12,0x17);          break;
-        case'ECALL': w=0x00000073; break;
-        case'EBREAK':w=0x00100073; break;
-        case'NOP':   w=0x00000013; break;
-        case'MV':  w=itype(reg(tok[1]),reg(tok[2]),0,0,0x13);           break;
-        case'LI':  w=itype(reg(tok[1]),0,imm(tok[2]),0,0x13);           break;
-        case'RET': w=itype(0,1,0,0,0x67);                               break;
-        case'J':{const t=tok[1];const off=labels[t]!=null?labels[t]-pc:imm(t);w=jtype(0,off);break;}
-        case'NOT': w=itype(reg(tok[1]),reg(tok[2]),-1,4,0x13);          break;
-        case'NEG': w=rtype(reg(tok[1]),0,reg(tok[2]),0,0x20);           break;
-        case'BEQZ':{const t=tok[2];const off=labels[t]!=null?labels[t]-pc:imm(t);w=btype(reg(tok[1]),0,off,0);break;}
-        case'BNEZ':{const t=tok[2];const off=labels[t]!=null?labels[t]-pc:imm(t);w=btype(reg(tok[1]),0,off,1);break;}
-        default: throw new Error(`Unknown mnemonic: ${mn}`);
-      }
-    } catch(e) { throw new Error(`"${line}" — ${e.message}`); }
-    words.push((w>>>0).toString(16).padStart(8,'0').toUpperCase());
-  }
-  return words.join('\n');
 }
 
-// ── Init ──────────────────────────────────────────────────────
-async function init() {
-  buildRegGrid();
+// ============================================================================
+// MODE & CONFIGURATION
+// ============================================================================
+async function changeMode() {
+  const mode = document.getElementById('modeSelect').value;
+  const policy = document.getElementById('policySelect').value;
+  
+  document.getElementById('rowPolicy').style.display = (mode === 'superscalar') ? 'flex' : 'none';
+  
+  // Show/hide specific architecture visualization containers (to be built next)
+  document.getElementById('pipeScalar').style.display = (mode === 'scalar') ? 'block' : 'none';
+  document.getElementById('pipeSuperscalar').style.display = (mode === 'superscalar') ? 'block' : 'none';
+  document.getElementById('pipeVliw').style.display = (mode === 'vliw') ? 'block' : 'none';
+
   try {
-    document.getElementById('loadingMsg').textContent = 'Loading program library...';
+    const r = await fetch('/api/mode', {
+      method: 'POST',
+      body: JSON.stringify({ mode: mode, policy: policy })
+    });
+    const d = await r.json();
+    if(d.ok) { updateUI(d.state); }
+    else { showToast(d.error); }
+  } catch(e) { showToast(e.message); }
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+async function init() {
+  initRegGrid();
+  try {
     await loadProgramList();
-    document.getElementById('loadingMsg').textContent = 'Fetching initial state...';
-    const s = await api('GET', '/api/state');
-    renderUI(s);
+    await changeMode();
     const ov = document.getElementById('loadingOv');
     ov.style.opacity = '0';
-    setTimeout(() => ov.remove(), 400);
-    toast('RVSim ready — select a program to begin', 'success');
+    setTimeout(() => ov.remove(), 300);
+    toast('RVSim ready — select a program to begin.', 'success');
   } catch(e) {
-    document.getElementById('loadingMsg').innerHTML =
-      `<span style="color:var(--red)">Failed to connect.<br><small>${e.message}</small></span>`;
+    document.getElementById('loadingMsg').innerHTML = `Connection failed:<br><span style="color:var(--red)">${e.message}</span>`;
+    document.querySelector('.loading-ring').style.borderTopColor = 'var(--red)';
   }
 }
 
 window.addEventListener('load', init);
 
+// Keyboard shortcuts
+function setSvgOpacity(id, val) {
+  const el = document.getElementById(id);
+  if(el) { el.style.transition = 'opacity 0.3s'; el.style.opacity = val; }
+}
+
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'TEXTAREA') return;
-  if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); doStep(1); }
-  if (e.key === 'r' || e.key === 'R') doReset();
+  if(e.target.tagName === 'TEXTAREA') return;
+  if(e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); doStep(1); }
+  if(e.key === 'r' || e.key === 'R') doReset();
 });
 </script>
 </body>

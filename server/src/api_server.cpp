@@ -118,7 +118,7 @@ static const BuiltinProgram PROGRAMS[] = {
 // APIServer
 // ---------------------------------------------------------------------------
 APIServer::APIServer(int port) : port_(port) {
-    pipeline_ = std::make_unique<rv32i::Pipeline>(config_);
+    pipeline_ = std::make_unique<rv32i::Pipeline>();
     setup_routes();
 }
 
@@ -149,6 +149,7 @@ void APIServer::setup_routes() {
     // API routes
     svr_.Post("/api/load",   [this](const httplib::Request& r, httplib::Response& res) { handle_load(r, res);   });
     svr_.Post("/api/config", [this](const httplib::Request& r, httplib::Response& res) { handle_config(r, res); });
+    svr_.Post("/api/mode",   [this](const httplib::Request& r, httplib::Response& res) { handle_mode(r, res);   });
     svr_.Post("/api/step",   [this](const httplib::Request& r, httplib::Response& res) { handle_step(r, res);   });
     svr_.Post("/api/run",    [this](const httplib::Request& r, httplib::Response& res) { handle_run(r, res);    });
     svr_.Post("/api/reset",  [this](const httplib::Request& r, httplib::Response& res) { handle_reset(r, res);  });
@@ -164,6 +165,7 @@ void APIServer::setup_routes() {
 }
 
 void APIServer::handle_root(const httplib::Request&, httplib::Response& res) {
+    res.set_header("Cache-Control", "no-cache, no-store, must-revalidate");
     res.set_content(EMBEDDED_FRONTEND_HTML, "text/html; charset=utf-8");
 }
 
@@ -189,9 +191,10 @@ void APIServer::handle_load(const httplib::Request& req, httplib::Response& res)
 
         bool ok = pipeline_->load_program(hex_str);
         if (!ok) { error_response(res, "Failed to parse hex program"); return; }
+        
+        current_hex_program_ = hex_str;
 
-        auto state = pipeline_->get_state();
-        json_response(res, {{"ok", true}, {"state", state_to_json(state)}});
+        json_response(res, {{"ok", true}, {"state", pipeline_->get_state_json()}});
     } catch (const std::exception& e) {
         error_response(res, std::string("Error: ") + e.what());
     }
@@ -200,16 +203,39 @@ void APIServer::handle_load(const httplib::Request& req, httplib::Response& res)
 void APIServer::handle_config(const httplib::Request& req, httplib::Response& res) {
     try {
         auto body = nlohmann::json::parse(req.body);
-        rv32i::PipelineConfig cfg;
-        if (body.contains("predictor"))  cfg.predictor_type = body["predictor"].get<std::string>();
-        if (body.contains("forwarding")) cfg.forwarding_enabled = body["forwarding"].get<bool>();
-        if (body.contains("hazard_det")) cfg.hazard_detection   = body["hazard_det"].get<bool>();
-        if (body.contains("cache"))      cfg.cache_config       = body["cache"].dump();
-        pipeline_->configure(cfg);
-        json_response(res, {{"ok", true}, {"config", {
-            {"predictor", cfg.predictor_type},
-            {"forwarding_enabled", cfg.forwarding_enabled}
-        }}});
+        pipeline_->configure(body);
+        json_response(res, {{"ok", true}, {"state", pipeline_->get_state_json()}});
+    } catch (const std::exception& e) {
+        error_response(res, e.what());
+    }
+}
+
+void APIServer::handle_mode(const httplib::Request& req, httplib::Response& res) {
+    try {
+        auto body = nlohmann::json::parse(req.body);
+        std::string mode = body["mode"].get<std::string>();
+        
+        if (mode == "scalar") {
+            pipeline_ = std::make_unique<rv32i::Pipeline>();
+        } else if (mode == "superscalar") {
+            std::string pol = body.value("policy", "io_io");
+            rv32i::SuperscalarPolicy sp = rv32i::SuperscalarPolicy::IO_IO;
+            if (pol == "ooo_io") sp = rv32i::SuperscalarPolicy::OOO_IO;
+            else if (pol == "ooo_ooo") sp = rv32i::SuperscalarPolicy::OOO_OOO;
+            pipeline_ = std::make_unique<rv32i::SuperscalarPipeline>(sp);
+        } else if (mode == "vliw") {
+            pipeline_ = std::make_unique<rv32i::VLIWPipeline>();
+        } else {
+            error_response(res, "Unknown mode: " + mode);
+            return;
+        }
+        
+        // Reload current program if any
+        if (!current_hex_program_.empty()) {
+            pipeline_->load_program(current_hex_program_);
+        }
+        
+        json_response(res, {{"ok", true}, {"state", pipeline_->get_state_json()}});
     } catch (const std::exception& e) {
         error_response(res, e.what());
     }
@@ -224,12 +250,12 @@ void APIServer::handle_step(const httplib::Request& req, httplib::Response& res)
         }
         cycles = std::max(1, std::min(cycles, 1000));
 
-        rv32i::PipelineState state;
+        nlohmann::json state;
         for (int i = 0; i < cycles; ++i) {
             state = pipeline_->step();
             if (pipeline_->is_halted()) break;
         }
-        json_response(res, {{"ok", true}, {"state", state_to_json(state)}});
+        json_response(res, {{"ok", true}, {"state", state}});
     } catch (const std::exception& e) {
         error_response(res, e.what());
     }
@@ -243,7 +269,7 @@ void APIServer::handle_run(const httplib::Request& req, httplib::Response& res) 
             if (body.contains("max_cycles")) max_cycles = body["max_cycles"].get<int>();
         }
         auto state = pipeline_->run(max_cycles);
-        json_response(res, {{"ok", true}, {"state", state_to_json(state)}});
+        json_response(res, {{"ok", true}, {"state", state}});
     } catch (const std::exception& e) {
         error_response(res, e.what());
     }
@@ -251,13 +277,11 @@ void APIServer::handle_run(const httplib::Request& req, httplib::Response& res) 
 
 void APIServer::handle_reset(const httplib::Request&, httplib::Response& res) {
     pipeline_->reset();
-    auto state = pipeline_->get_state();
-    json_response(res, {{"ok", true}, {"state", state_to_json(state)}});
+    json_response(res, {{"ok", true}, {"state", pipeline_->get_state_json()}});
 }
 
 void APIServer::handle_state(const httplib::Request&, httplib::Response& res) {
-    auto state = pipeline_->get_state();
-    json_response(res, state_to_json(state));
+    json_response(res, pipeline_->get_state_json());
 }
 
 void APIServer::handle_programs(const httplib::Request&, httplib::Response& res) {
@@ -271,42 +295,9 @@ void APIServer::handle_programs(const httplib::Request&, httplib::Response& res)
 // ---------------------------------------------------------------------------
 // Serialization helpers
 // ---------------------------------------------------------------------------
-nlohmann::json APIServer::state_to_json(const rv32i::PipelineState& s) {
-    nlohmann::json stages = nlohmann::json::array();
-    static const char* snames[] = {"IF","ID","EX","MEM","WB"};
-    for (int i = 0; i < 5; ++i) {
-        const auto& snap = s.stages[i];
-        stages.push_back({
-            {"stage",      snames[i]},
-            {"asm",        snap.asm_str.empty() ? "---" : snap.asm_str},
-            {"pc",         snap.pc},
-            {"pc_hex",     snap.pc_hex.empty() ? "0x00000000" : snap.pc_hex},
-            {"bubble",     snap.bubble},
-            {"stalled",    snap.stalled},
-            {"forward_a",  snap.forward_a},
-            {"forward_b",  snap.forward_b},
-            {"cache_hit",  snap.cache_hit},
-            {"is_mem_op",  snap.is_mem_op},
-            {"is_write",   snap.is_write},
-            {"wb_rd",      snap.wb_rd},
-            {"wb_value",   snap.wb_value},
-            {"wb_active",  snap.wb_active}
-        });
-    }
-    return {
-        {"cycle",        s.cycle},
-        {"halted",       s.halted},
-        {"stall",        s.stall_this_cycle},
-        {"flush",        s.flush_this_cycle},
-        {"stages",       stages},
-        {"stats",        s.stats.to_json()},
-        {"registers",    s.registers},
-        {"cache",        s.cache_state},
-        {"predictor",    s.predictor_state}
-    };
-}
 
 void APIServer::json_response(httplib::Response& res, const nlohmann::json& j, int status) {
+    res.set_header("Cache-Control", "no-cache, no-store, must-revalidate");
     res.set_content(j.dump(), "application/json");
     res.status = status;
 }

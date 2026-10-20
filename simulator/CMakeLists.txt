@@ -7,6 +7,8 @@ add_library(simulator_lib STATIC
     src/core/hazard_unit.cpp
     src/core/forwarding_unit.cpp
     src/core/pipeline.cpp
+    src/core/superscalar_pipeline.cpp
+    src/core/vliw_pipeline.cpp
     src/branch/static_pred.cpp
     src/branch/two_bit_pred.cpp
     src/branch/gshare_pred.cpp

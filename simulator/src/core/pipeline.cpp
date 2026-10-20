@@ -466,7 +466,7 @@ void Pipeline::latch() {
 // ---------------------------------------------------------------------------
 // step() — one clock cycle
 // ---------------------------------------------------------------------------
-PipelineState Pipeline::step() {
+PipelineState Pipeline::step_internal() {
     if (halted_) return build_state(nullptr, false, false);
 
     ++cycle_;
@@ -540,10 +540,10 @@ PipelineState Pipeline::step() {
 // ---------------------------------------------------------------------------
 // run() — run until halted or max_cycles reached
 // ---------------------------------------------------------------------------
-PipelineState Pipeline::run(int max_cycles) {
+PipelineState Pipeline::run_internal(int max_cycles) {
     PipelineState s;
     for (int i = 0; i < max_cycles && !halted_; ++i) {
-        s = step();
+        s = step_internal();
     }
     return s;
 }
@@ -583,4 +583,65 @@ void Pipeline::configure(const PipelineConfig& cfg) {
     // Don't reset — allow hot-swap
 }
 
+// ---------------------------------------------------------------------------
+// SimulatorEngine interface — JSON-returning wrappers
+// ---------------------------------------------------------------------------
+static nlohmann::json pipeline_state_to_json(const PipelineState& s) {
+    nlohmann::json stages = nlohmann::json::array();
+    static const char* snames[] = {"IF","ID","EX","MEM","WB"};
+    for (int i = 0; i < 5; ++i) {
+        const auto& snap = s.stages[i];
+        stages.push_back({
+            {"stage",      snames[i]},
+            {"asm",        snap.asm_str.empty() ? "---" : snap.asm_str},
+            {"pc",         snap.pc},
+            {"pc_hex",     snap.pc_hex.empty() ? "0x00000000" : snap.pc_hex},
+            {"bubble",     snap.bubble},
+            {"stalled",    snap.stalled},
+            {"forward_a",  snap.forward_a},
+            {"forward_b",  snap.forward_b},
+            {"cache_hit",  snap.cache_hit},
+            {"is_mem_op",  snap.is_mem_op},
+            {"is_write",   snap.is_write},
+            {"wb_rd",      snap.wb_rd},
+            {"wb_value",   snap.wb_value},
+            {"wb_active",  snap.wb_active}
+        });
+    }
+    return {
+        {"engine",       "scalar"},
+        {"cycle",        s.cycle},
+        {"halted",       s.halted},
+        {"stall",        s.stall_this_cycle},
+        {"flush",        s.flush_this_cycle},
+        {"stages",       stages},
+        {"stats",        s.stats.to_json()},
+        {"registers",    s.registers},
+        {"cache",        s.cache_state},
+        {"predictor",    s.predictor_state}
+    };
+}
+
+nlohmann::json Pipeline::step() {
+    return pipeline_state_to_json(step_internal());
+}
+
+nlohmann::json Pipeline::run(int max_cycles) {
+    return pipeline_state_to_json(run_internal(max_cycles));
+}
+
+nlohmann::json Pipeline::get_state_json() const {
+    return pipeline_state_to_json(get_state());
+}
+
+void Pipeline::configure(const nlohmann::json& cfg) {
+    PipelineConfig pcfg = config_;
+    if (cfg.contains("predictor"))  pcfg.predictor_type     = cfg["predictor"].get<std::string>();
+    if (cfg.contains("forwarding")) pcfg.forwarding_enabled = cfg["forwarding"].get<bool>();
+    if (cfg.contains("hazard_det")) pcfg.hazard_detection   = cfg["hazard_det"].get<bool>();
+    if (cfg.contains("cache"))      pcfg.cache_config       = cfg["cache"].dump();
+    configure(pcfg);
+}
+
 } // namespace rv32i
+
